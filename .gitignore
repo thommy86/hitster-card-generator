@@ -1,0 +1,41 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+venv/
+ENV/
+*.egg-info/
+
+# Credentials
+config.json
+*.env
+.env
+
+# Output folders
+*_cards_family/
+*_cards_leri/
+cards_*/
+*clean.pdf
+*family.pdf
+*leri.pdf
+*.json
+!config.example.json
+
+# Temporary files
+test_*.png
+*.tmp
+*.ipynb
+*.png 
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+
+# OS
+.DS_Store
+Thumbs.db
