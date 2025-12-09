@@ -19,6 +19,7 @@ config.json
 *_cards_leri/
 cards_*/
 *clean.pdf
+all_cards.pdf
 *family.pdf
 *leri.pdf
 *.json
