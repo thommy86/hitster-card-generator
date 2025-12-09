@@ -212,21 +212,44 @@ def get_year_color(year, all_years):
 
 
 def load_fonts():
-    """Load Montserrat fonts with fallback to system fonts."""
+    """Load Montserrat fonts with cross-platform fallback."""
+    # Try Montserrat first
     try:
         font_year = ImageFont.truetype(FONT_PATHS['year'], 380)
         font_artist = ImageFont.truetype(FONT_PATHS['artist'], 110)
         font_song = ImageFont.truetype(FONT_PATHS['song'], 100)
         return font_year, font_artist, font_song
     except:
+        pass
+    
+    # Try common system fonts (cross-platform)
+    fallback_fonts = [
+        # Linux
+        ("/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf", 
+         "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf",
+         "/usr/share/fonts/truetype/dejavu/DejaVuSans-Oblique.ttf"),
+        # macOS
+        ("/System/Library/Fonts/Helvetica.ttc",
+         "/System/Library/Fonts/Helvetica.ttc",
+         "/System/Library/Fonts/Helvetica.ttc"),
+        # Windows
+        ("C:\\Windows\\Fonts\\arialbd.ttf",
+         "C:\\Windows\\Fonts\\arial.ttf",
+         "C:\\Windows\\Fonts\\ariali.ttf"),
+    ]
+    
+    for bold_path, regular_path, italic_path in fallback_fonts:
         try:
-            font_year = ImageFont.truetype("/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf", 300)
-            font_artist = ImageFont.truetype("/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf", 140)
-            font_song = ImageFont.truetype("/usr/share/fonts/truetype/dejavu/DejaVuSans-Oblique.ttf", 140)
+            font_year = ImageFont.truetype(bold_path, 300)
+            font_artist = ImageFont.truetype(regular_path, 140)
+            font_song = ImageFont.truetype(italic_path, 140)
             return font_year, font_artist, font_song
         except:
-            print("Warning: Using default fonts (may not look optimal)")
-            return ImageFont.load_default(), ImageFont.load_default(), ImageFont.load_default()
+            continue
+    
+    # Last resort
+    print("Warning: Using default fonts (may not look optimal)")
+    return ImageFont.load_default(), ImageFont.load_default(), ImageFont.load_default()
 
 
 def create_solution_side(song_name, artist, year, all_years, output_path):
