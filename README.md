@@ -10,7 +10,7 @@ The script generates a PDF optimized for duplex printing (the backs are mirrored
 
 | **Page 1: Front (Scan to Play)** | **Page 2: Back (Solutions)** |
 |:---:|:---:|
-| <img src="example_pictures/qr_code_side.jpg" width="400" alt="PDF Front Page QR Codes"> | <img src="example_pictures/solution_side.png" width="400" alt="PDF Back Page Solutions"> |
+| <img src="example_pictures/qr_code_side.png" width="400" alt="PDF Front Page QR Codes"> | <img src="example_pictures/solution_side.png" width="400" alt="PDF Back Page Solutions"> |
 | *Neon rings with Spotify QR codes* | *Year-based color gradients (Purple=Oldest, Blue=Newest)* |
 
 ---
