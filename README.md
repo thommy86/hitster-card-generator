@@ -107,6 +107,16 @@ generate_hitster_cards(
 )
 ```
 
+## 🔧 Accuracy Fix (Incorrect Years)
+
+Spotify often provides "Remaster" or "Greatest Hits" years (e.g., 2011) instead of the original release date. To fix this:
+
+1.  Run the script once. It will save `hitster_cards/songs.json`.
+2.  Open `songs.json` or paste it into ChatGPT/Gemini with this prompt:
+    > "Correct the years in this JSON to the original single release dates. Return valid JSON."
+3.  Save the corrected file back to `hitster_cards/songs.json`.
+4.  Run the script again. It will use your corrected local file instead of Spotify data.
+
 ## Output
 
 The script generates:
