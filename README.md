@@ -132,7 +132,7 @@ The script generates:
 
 ## Printing Instructions
 
-1. Print the PDF double-sided (flip on short edge)
+1. Print the PDF double-sided (flip on long edge)
 2. Cut along the gaps (2mm spacing between cards)
 3. Each card should be 5cm x 5cm
 
