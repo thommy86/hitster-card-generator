@@ -6,7 +6,7 @@ Turn your favorite playlists into a physical card game. This tool creates profes
 
 > [!IMPORTANT]
 > **2026 API Update:** As of January 2, 2026, Spotify has temporarily disabled the "Create App" button for new developer accounts. 
-> **If you cannot create a Spotify App, use Method 1 (The Scraper) below.** It requires no API keys and works for any playlist.
+> **If you cannot create a Spotify App, use Method 1 the webapp or for more control Method 2 (The Scraper) below.** It requires no API keys and works for any playlist.
 
 ## 👀 Preview
 
