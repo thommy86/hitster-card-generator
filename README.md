@@ -42,22 +42,6 @@ The script generates a PDF optimized for duplex printing (the backs are mirrored
    pip install -r requirements.txt
    ```
 
-3. **Install Montserrat fonts (recommended for authentic Hitster look):**
-   
-   **Linux/Mac:**
-   ```bash
-   git clone https://github.com/JulietaUla/Montserrat.git /tmp/Montserrat
-   mkdir -p ~/.fonts
-   cp /tmp/Montserrat/fonts/ttf/*.ttf ~/.fonts/
-   fc-cache -f
-   ```
-   
-   **Windows:**
-   - Download fonts from [Google Fonts](https://fonts.google.com/specimen/Montserrat)
-   - Install: Bold, SemiBold, and Medium Italic variants
-
-   *Note: If fonts aren't installed, the script will fall back to system fonts.*
-
 ---
 
 ## Usage
