@@ -3,6 +3,20 @@ import os
 import io
 from src import utils  # Import your refactored logic
 
+with st.sidebar:
+    st.divider()
+    st.markdown("### ☕ Support the Project")
+    st.write("If this tool made your game night special, feel free to support the developer!")
+    
+    # This uses the professional button from Buy Me a Coffee
+    # Replace 'WhiteShunpo' if your final username is different
+    button_html = """
+    <a href="https://www.buymeacoffee.com/WhiteShunpo" target="_blank">
+        <img src="https://cdn.buymeacoffee.com/buttons/v2/default-yellow.png" 
+        alt="Buy Me A Coffee" style="height: 50px !important;width: 181px !important;" >
+    </a>
+    """
+    st.markdown(button_html, unsafe_allow_html=True)
 # --- CONFIGURATION ---
 # Streamlit Cloud needs to know where the project root is
 PROJECT_ROOT = os.path.dirname(os.path.abspath(__file__))

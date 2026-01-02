@@ -1,5 +1,7 @@
 # Hitster Card Generator 🎵
 
+[![Buy Me a Coffee](https://img.shields.io/badge/Buy%20Me%20a%20Coffee-Donate-orange?style=for-the-badge&logo=buy-me-a-coffee)](https://www.buymeacoffee.com/WhiteShunpo)
+
 **Generate custom Hitster-style music game cards from any Spotify playlist!**
 
 Turn your favorite playlists into a physical card game. This tool creates professional-looking cards with neon QR codes for scanning and date-based colored solution backs. It automatically handles the layout for double-sided printing.
