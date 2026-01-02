@@ -49,7 +49,24 @@ with st.sidebar:
     """
     st.markdown(button_html, unsafe_allow_html=True)
 
+st.divider()
 
+with st.expander("⚖️ Disclaimer, Accuracy & Support"):
+    st.info("""
+    **Why are some years wrong?**
+    Metadata providers often list the date a song was added to a digital album (like a 'Greatest Hits' or 'Remaster') rather than the original single release date.
+    
+    **📱 Mobile User Note:**
+    If the download button doesn't respond on your phone, please try a desktop browser. Mobile browsers sometimes struggle with large in-memory PDF streams.
+    """)
+    
+    # Bug Report and Feedback Links
+    col_bug, col_feature = st.columns(2)
+    with col_bug:
+        st.markdown("[🪲 Report a Bug](https://github.com/WhiteShunpo/hitster-cards-generator/issues/new?template=bug_report.md)")
+    with col_feature:
+        st.markdown("[💡 Suggest a Feature](https://github.com/WhiteShunpo/hitster-cards-generator/issues/new)")
+        
 # --- MAIN PAGE ---
 # Hero Section
 col1, col2 = st.columns([2, 1])
