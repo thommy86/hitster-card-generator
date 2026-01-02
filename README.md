@@ -28,11 +28,6 @@ The script generates a PDF optimized for duplex printing (the backs are mirrored
 - **Spotify Integration:** Fetches song metadata (Artist, Title, Year) and Spotify Links automatically using the Spotify Web API.
 
 
-## Prerequisites
-
-- Python 3.7+
-- Spotify Developer Account (free)
-
 ## Installation
 
 1. **Clone this repository:**
