@@ -4,6 +4,10 @@
 
 Turn your favorite playlists into a physical card game. This tool creates professional-looking cards with neon QR codes for scanning and date-based colored solution backs. It automatically handles the layout for double-sided printing.
 
+> [!IMPORTANT]
+> **2026 API Update:** As of January 2, 2026, Spotify has temporarily disabled the "Create App" button for new developer accounts. 
+> **If you cannot create a Spotify App, use Method 1 (The Scraper) below.** It requires no API keys and works for any playlist.
+
 ## 👀 Preview
 
 The script generates a PDF optimized for duplex printing (the backs are mirrored so they align perfectly when cut).
@@ -12,10 +16,6 @@ The script generates a PDF optimized for duplex printing (the backs are mirrored
 |:---:|:---:|
 | <img src="example_pictures/qr_code_side.png" width="400" alt="PDF Front Page QR Codes"> | <img src="example_pictures/solution_side.png" width="400" alt="PDF Back Page Solutions"> |
 | *Neon rings with Spotify QR codes* | *Year-based color gradients (Purple=Oldest, Blue=Newest)* |
-
-
-> [!IMPORTANT]
-> **2026 API Update:** Spotify has temporarily disabled the "Create App" button for new developer accounts. If you cannot create a Spotify App, use **Method 1 (The Scraper)** below. It requires no API keys and works for any playlist.
 
 ---
 
@@ -27,6 +27,7 @@ The script generates a PDF optimized for duplex printing (the backs are mirrored
 - **Duplex Optimized:** Automatically generates alternating pages with mirrored layouts for accurate double-sided printing.
 - **Spotify Integration:** Fetches song metadata (Artist, Title, Year) and Spotify Links automatically using the Spotify Web API.
 
+---
 
 ## Installation
 
@@ -57,23 +58,19 @@ The script generates a PDF optimized for duplex printing (the backs are mirrored
 
    *Note: If fonts aren't installed, the script will fall back to system fonts.*
 
+---
+
 ## Usage
 
 ### Method 1: No-API Scraper (Easiest)
 Use this if you can't get Spotify API keys. It handles playlists of any size (300+ songs).
 
-   Get Track Links: Open the Spotify Desktop App.
-
-   Select Songs: Click the first song, press Ctrl + A (to select all).
-
-   Copy: Ctrl+C
-
-   Save: Create a file named links.txt in the project root and paste the links inside.
-
-   Run:
+1. **Collect Links:** Open the Spotify Desktop App, select your songs (`Ctrl+A`), and ('Ctrl+C').
+2. **Save Links:** Create a file named `links.txt` in the project root and paste the links inside.
+3. **Run:**
    ```bash
    python hitster_card_creator.py
-   ```
+   '''
 
 ### Method 2: Official Spotify API
 Use this if you already have an existing Spotify App.
