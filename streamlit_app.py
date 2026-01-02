@@ -29,9 +29,10 @@ st.markdown("Generate custom music game cards from any Spotify playlist.")
 # Help for users
 with st.expander("How do I get links?"):
     st.write("1. Open Spotify Desktop.")
-    st.write("2. Select songs (Ctrl+A).")
-    st.write("3. Copy (Ctrl+C).")
-    st.write("4. Paste below!")
+    st.write("2. Go to your playlist.")
+    st.write("3. Select songs (Ctrl+A).")
+    st.write("4. Copy (Ctrl+C).")
+    st.write("5. Paste below!")
 
 # Input Area
 user_input = st.text_area("Paste Spotify links here:", height=200, placeholder="https://open.spotify.com/track/...")
