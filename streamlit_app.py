@@ -51,7 +51,7 @@ with st.sidebar:
 
 st.divider()
 
-with st.expander("⚖️ Disclaimer, Accuracy & Support"):
+with st.expander("Disclaimer, Accuracy & Support"):
     st.info("""
     **Why are some years wrong?**
     Metadata providers often list the date a song was added to a digital album (like a 'Greatest Hits' or 'Remaster') rather than the original single release date.
@@ -63,10 +63,10 @@ with st.expander("⚖️ Disclaimer, Accuracy & Support"):
     # Bug Report and Feedback Links
     col_bug, col_feature = st.columns(2)
     with col_bug:
-        st.markdown("[🪲 Report a Bug](https://github.com/WhiteShunpo/hitster-cards-generator/issues/new?template=bug_report.md)")
+        st.markdown("[Report a Bug](https://github.com/WhiteShunpo/hitster-cards-generator/issues/new?template=bug_report.md)")
     with col_feature:
-        st.markdown("[💡 Suggest a Feature](https://github.com/WhiteShunpo/hitster-cards-generator/issues/new)")
-        
+        st.markdown("[Suggest a Feature](https://github.com/WhiteShunpo/hitster-cards-generator/issues/new)")
+
 # --- MAIN PAGE ---
 # Hero Section
 col1, col2 = st.columns([2, 1])
