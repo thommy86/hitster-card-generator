@@ -30,7 +30,7 @@ db = {
         'song': os.path.join(FONT_DIR, "Montserrat-MediumItalic.ttf")
     },
     "color_gradient": ["#7030A0", "#E31C79", "#FF6B9D", "#FFA500", "#FFD700", "#87CEEB", "#4169E1"],
-    "card_size": 1500, # Balanced for web performance
+    "card_size": 2000, # Balanced for web performance
     "neon_colors": [(255, 0, 100), (0, 200, 255), (255, 255, 0), (0, 255, 120)]
 }
 utils.db = db # Inject config into utils
