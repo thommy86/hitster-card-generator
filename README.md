@@ -13,7 +13,9 @@ The script generates a PDF optimized for duplex printing (the backs are mirrored
 | <img src="example_pictures/qr_code_side.png" width="400" alt="PDF Front Page QR Codes"> | <img src="example_pictures/solution_side.png" width="400" alt="PDF Back Page Solutions"> |
 | *Neon rings with Spotify QR codes* | *Year-based color gradients (Purple=Oldest, Blue=Newest)* |
 
-[!IMPORTANT] 2026 API Update: Spotify has temporarily disabled the "Create App" button for new developer accounts. If you cannot create a Spotify App, use Method 1 (The Scraper) below. It requires no API keys and works for any playlist.
+
+> [!IMPORTANT]
+> **2026 API Update:** Spotify has temporarily disabled the "Create App" button for new developer accounts. If you cannot create a Spotify App, use **Method 1 (The Scraper)** below. It requires no API keys and works for any playlist.
 
 ---
 
@@ -60,25 +62,6 @@ The script generates a PDF optimized for duplex printing (the backs are mirrored
 
    *Note: If fonts aren't installed, the script will fall back to system fonts.*
 
-## Setup Spotify API Credentials
-
-1. **Go to [Spotify Developer Dashboard](https://developer.spotify.com/dashboard)**
-
-2. **Log in with your Spotify account** (or create one)
-
-3. **Create an app:**
-   - Click "Create app"
-   - App name: `Hitster Card Generator` (or any name)
-   - App description: `Generate game cards from playlists`
-   - Redirect URI: `https://localhost` (required but not used)
-   - Check "Web API"
-   - Click "Save"
-
-4. **Get your credentials:**
-   - On your app page, click "Settings"
-   - Copy your **Client ID**
-   - Click "View client secret" and copy your **Client Secret**
-
 ## Usage
 
 ### Method 1: No-API Scraper (Easiest)
@@ -112,6 +95,25 @@ Then run:
 ```bash
 python hitster_card_creator.py
 ```
+
+## Setup Spotify API Credentials
+
+1. **Go to [Spotify Developer Dashboard](https://developer.spotify.com/dashboard)**
+
+2. **Log in with your Spotify account** (or create one)
+
+3. **Create an app:**
+   - Click "Create app"
+   - App name: `Hitster Card Generator` (or any name)
+   - App description: `Generate game cards from playlists`
+   - Redirect URI: `https://localhost` (required but not used)
+   - Check "Web API"
+   - Click "Save"
+
+4. **Get your credentials:**
+   - On your app page, click "Settings"
+   - Copy your **Client ID**
+   - Click "View client secret" and copy your **Client Secret**
 
 ## 🔧 Accuracy Fix (Incorrect Years)
 
