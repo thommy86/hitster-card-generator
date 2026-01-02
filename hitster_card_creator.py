@@ -25,6 +25,17 @@ from reportlab.lib.units import cm
 # CONFIGURATION
 # =============================================================================
 
+# Get the directory where the script is located
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+
+# Point to your new fonts folder
+FONT_DIR = os.path.join(BASE_DIR, "fonts")
+
+FONT_PATHS = {
+    'year': os.path.join(FONT_DIR, "Montserrat-Bold.ttf"),
+    'artist': os.path.join(FONT_DIR, "Montserrat-SemiBold.ttf"),
+    'song': os.path.join(FONT_DIR, "Montserrat-MediumItalic.ttf")
+}
 # Color gradient for year-based card colors (oldest to newest)
 COLOR_GRADIENT = [
     "#7030A0",  # Purple (oldest)
@@ -39,13 +50,6 @@ COLOR_GRADIENT = [
 # Card design parameters
 CARD_SIZE = 2000  # pixels
 NEON_COLORS = [(255, 0, 100), (0, 200, 255), (255, 255, 0), (0, 255, 120)]
-
-# Font paths (will fall back to system fonts if not found)
-FONT_PATHS = {
-    'year': "/home/USER/.fonts/Montserrat-Bold.ttf",
-    'artist': "/home/USER/.fonts/Montserrat-SemiBold.ttf",
-    'song': "/home/USER/.fonts/Montserrat-MediumItalic.ttf"
-}
 
 
 # =============================================================================
