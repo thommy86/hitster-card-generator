@@ -20,6 +20,7 @@ The script generates a PDF optimized for duplex printing (the backs are mirrored
 ---
 
 ## ✨ Features
+- **Web Interface:** New Streamlit UI for easy link pasting and instant PDF generation.
 - **No API Key Required:** Use the new "Links Mode" to bypass Spotify Developer restrictions.
 - **Neon Design:** Generates QR codes with a randomized neon ring aesthetic.
 - **Smart Timeline Colors:** Solution cards use a dynamic color gradient (Purple → Pink → Gold → Blue) representing the release year relative to the other songs in the playlist.
@@ -46,7 +47,15 @@ The script generates a PDF optimized for duplex printing (the backs are mirrored
 
 ## Usage
 
-### Method 1: No-API Scraper (Easiest)
+### 🌐 Method 1: Web Interface (Easiest)
+The easiest way to generate cards is via my live web app:
+👉 **[Hitster Card Generator](https://hitster-card-generator.streamlit.app/)**
+
+1. **Copy Links**: In Spotify Desktop, select your songs and press `Ctrl+C`.
+2. **Paste**: Enter the links into the web app text area.
+3. **Download**: Click "Create My PDF" and save your high-res printable file.
+
+### Method 2: No-API Scraper (Patch for current problems with unavailable Spotify API keys)
 Use this if you can't get Spotify API keys. It handles playlists of any size (300+ songs).
 
 1. **Collect Links:** Open the Spotify Desktop App, select your songs (`Ctrl+A`), and ('Ctrl+C').
@@ -55,7 +64,7 @@ Use this if you can't get Spotify API keys. It handles playlists of any size (30
    ```bash
    python hitster_card_creator.py
 
-### Method 2: Official Spotify API
+### Method 3: Official Spotify API
 Use this if you already have an existing Spotify App.
 
 Open `hitster_card_creator.py` and replace the placeholders:
