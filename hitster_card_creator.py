@@ -3,20 +3,22 @@ Hitster Card Generator
 Generate custom Hitster-style music game cards from Spotify playlists.
 """
 
-import qrcode
-import requests
+import time
+import os
 import json
-import numpy as np
-from PIL import Image, ImageOps, ImageDraw, ImageFont
-import matplotlib.colors as mcolors
 import random
 import textwrap
-import os
+import re
+import qrcode
+import requests
+import numpy as np
+from bs4 import BeautifulSoup
+from PIL import Image, ImageOps, ImageDraw, ImageFont
+import matplotlib.colors as mcolors
 from reportlab.lib.pagesizes import A4
 from reportlab.pdfgen import canvas
 from reportlab.lib.utils import ImageReader
 from reportlab.lib.units import cm
-import re
 
 
 # =============================================================================
@@ -45,6 +47,61 @@ FONT_PATHS = {
     'song': "/home/USER/.fonts/Montserrat-MediumItalic.ttf"
 }
 
+
+# =============================================================================
+# NO-API SCRAPER FUNCTIONS (FALLBACK)
+# =============================================================================
+
+def get_year_from_itunes(artist, title):
+    """Pings iTunes API to find the release year."""
+    query = f"{artist} {title}".replace(" ", "+")
+    itunes_url = f"https://itunes.apple.com/search?term={query}&entity=song&limit=1"
+    try:
+        res = requests.get(itunes_url, timeout=5)
+        results = res.json().get('results', [])
+        if results:
+            return results[0]['releaseDate'].split('-')[0]
+    except:
+        pass
+    return "0000"
+
+def fetch_no_api_data(links_file):
+    """Scrapes metadata from public Spotify pages based on links.txt."""
+    if not os.path.exists(links_file):
+        return None
+        
+    print(f"Found {links_file}. Switching to No-API Scraper Mode...")
+    with open(links_file, 'r') as f:
+        urls = [line.strip() for line in f.readlines() if 'spotify.com/track/' in line]
+
+    songs, years, artists, links = [], [], [], []
+    
+    for i, url in enumerate(urls, 1):
+        print(f"  [{i}/{len(urls)}] Scraping: {url}")
+        headers = {'User-Agent': 'Mozilla/5.0'}
+        try:
+            res = requests.get(url, headers=headers, timeout=5)
+            soup = BeautifulSoup(res.text, 'html.parser')
+            
+            # Metadata from OpenGraph tags
+            title = soup.find("meta", property="og:title")['content']
+            desc = soup.find("meta", property="og:description")['content']
+            artist = desc.split(" · ")[0]
+            
+            year_str = get_year_from_itunes(artist, title)
+            year = int(year_str) if year_str != "0000" else -1000
+            
+            songs.append(title)
+            artists.append(artist)
+            years.append(year)
+            links.append(url)
+            
+            print(f"{year} | {artist} - {title}")
+            time.sleep(0.5)
+        except Exception as e:
+            print(f"Error: {e}")
+            
+    return songs, years, artists, links
 
 # =============================================================================
 # SPOTIFY API FUNCTIONS
@@ -400,78 +457,69 @@ def create_cards_pdf(cards_folder, output_pdf_path):
 
 
 # =============================================================================
-# MAIN PIPELINE
+# FINAL INTEGRATED PIPELINE
 # =============================================================================
 
-def generate_hitster_cards(playlist_url, client_id, client_secret, output_dir="hitster_cards"):
-    """
-    Complete pipeline: Fetch playlist → Generate cards → Create PDF
-    """
+def generate_hitster_cards(playlist_url=None, client_id=None, client_secret=None, output_dir="hitster_cards"):
     print("=== Hitster Card Generator ===\n")
-    
-    # Create output directory first so we can check/save the JSON file
     os.makedirs(output_dir, exist_ok=True)
     json_file = os.path.join(output_dir, "songs.json")
+    links_file = "links.txt"
 
-    # --- NEW LOGIC START ---
-    # If a local file exists, load it (allows you to fix years manually)
+    # --- DATA FETCHING LOGIC ---
     if os.path.exists(json_file):
         print(f"Step 1: Loading local data from {json_file}...")
         with open(json_file, 'r', encoding='utf-8') as f:
             data = json.load(f)
-            # Unpack the list of dictionaries back into separate lists
             song_names = [d['name'] for d in data]
             release_years = [d['year'] for d in data]
             artists = [d['artist'] for d in data]
             links = [d['link'] for d in data]
             
-    else:
-        # Otherwise, fetch from Spotify as usual
-        print("Step 1: Fetching playlist from Spotify...")
-        playlist_data = fetch_spotify_playlist(playlist_url, client_id, client_secret)
+    elif os.path.exists(links_file):
+        print(f"Step 1: No JSON found. Using {links_file} (Scraper Mode)...")
+        song_names, release_years, artists, links = fetch_no_api_data(links_file)
         
-        print("\nStep 2: Parsing song data...")
+        with open(json_file, 'w', encoding='utf-8') as f:
+            data = [{'name': n, 'year': y, 'artist': a, 'link': l} 
+                    for n, y, a, l in zip(song_names, release_years, artists, links)]
+            json.dump(data, f, indent=2)
+
+    elif client_id and client_secret and playlist_url:
+        print("Step 1: Fetching from Spotify API...")
+        playlist_data = fetch_spotify_playlist(playlist_url, client_id, client_secret)
         song_names, release_years, artists, links = parse_playlist_data(playlist_data)
         
-        # Save to JSON so you can edit it later
         with open(json_file, 'w', encoding='utf-8') as f:
-            data = [
-                {'name': n, 'year': y, 'artist': a, 'link': l}
-                for n, y, a, l in zip(song_names, release_years, artists, links)
-            ]
+            data = [{'name': n, 'year': y, 'artist': a, 'link': l} 
+                    for n, y, a, l in zip(song_names, release_years, artists, links)]
             json.dump(data, f, indent=2)
-        print(f"✓ Saved data to {json_file} (Edit this file to fix incorrect years!)")
-    # --- NEW LOGIC END ---
+    else:
+        print("ERROR: No API credentials AND no links.txt found.")
+        return
 
-    print(f"✓ Processing {len(song_names)} songs")
-    
-    # 3. Generate cards (Existing logic)
-    print(f"\nStep 3: Generating cards...")
+    # --- CARD GENERATION ---
+    print(f"\nStep 2: Generating {len(song_names)} cards...")
     for i, (link, name, artist, year) in enumerate(zip(links, song_names, artists, release_years)):
-        if (i + 1) % 20 == 0:
-            print(f"  Progress: {i+1}/{len(song_names)} cards...")
-        
-        qr_code = create_qr_code(link)
         qr_path = f"{output_dir}/card_{i+1:03d}_qr.png"
         sol_path = f"{output_dir}/card_{i+1:03d}_solution.png"
         
+        qr_code = create_qr_code(link)
         create_qr_with_neon_rings(qr_code, qr_path)
         create_solution_side(name, artist, year, release_years, sol_path)
-    
-    # 4. Create PDF (Existing logic)
-    print("\nStep 4: Creating print-ready PDF...")
+        if (i + 1) % 20 == 0:
+            print(f"  Progress: {i+1}/{len(song_names)}...")
+
+    # --- PDF CREATION ---
+    print("\nStep 3: Creating PDF...")
     pdf_path = f"{output_dir}.pdf"
     create_cards_pdf(output_dir, pdf_path)
-    
-    print(f"\nDone! Your Hitster cards are ready:")
-    print(f"   Cards: {output_dir}/")
-    print(f"   PDF: {pdf_path}")
-
+    print(f"\n✓ Done! PDF ready at: {pdf_path}")
 
 if __name__ == "__main__":
-    # Example usage - replace with your credentials and playlist
-    PLAYLIST_URL = "your_spotify_playlist_url_here"
-    CLIENT_ID = "your_spotify_client_id_here"
-    CLIENT_SECRET = "your_spotify_client_secret_here"
+    # If API is down, you can leave these blank and just have 'links.txt' ready
+    PLAYLIST_URL = "" 
+    CLIENT_ID = ""
+    CLIENT_SECRET = ""
     
     generate_hitster_cards(PLAYLIST_URL, CLIENT_ID, CLIENT_SECRET)

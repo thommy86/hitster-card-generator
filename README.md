@@ -13,10 +13,12 @@ The script generates a PDF optimized for duplex printing (the backs are mirrored
 | <img src="example_pictures/qr_code_side.png" width="400" alt="PDF Front Page QR Codes"> | <img src="example_pictures/solution_side.png" width="400" alt="PDF Back Page Solutions"> |
 | *Neon rings with Spotify QR codes* | *Year-based color gradients (Purple=Oldest, Blue=Newest)* |
 
+[!IMPORTANT] 2026 API Update: Spotify has temporarily disabled the "Create App" button for new developer accounts. If you cannot create a Spotify App, use Method 1 (The Scraper) below. It requires no API keys and works for any playlist.
+
 ---
 
 ## ✨ Features
-
+- **No API Key Required:** Use the new "Links Mode" to bypass Spotify Developer restrictions.
 - **Neon Design:** Generates QR codes with a randomized neon ring aesthetic.
 - **Smart Timeline Colors:** Solution cards use a dynamic color gradient (Purple → Pink → Gold → Blue) representing the release year relative to the other songs in the playlist.
 - **Print Ready:** Outputs a standard A4 PDF with 5x5cm cards in a 4x5 grid layout.
@@ -79,7 +81,24 @@ The script generates a PDF optimized for duplex printing (the backs are mirrored
 
 ## Usage
 
-### Method 1: Edit the script directly
+### Method 1: No-API Scraper (Easiest)
+Use this if you can't get Spotify API keys. It handles playlists of any size (300+ songs).
+
+   Get Track Links: Open the Spotify Desktop App.
+
+   Select Songs: Click the first song, press Ctrl + A (to select all).
+
+   Copy: Right-Click > Share > Copy Links to songs.
+
+   Save: Create a file named links.txt in the project root and paste the links inside.
+
+   Run:
+   ```bash
+   python hitster_card_creator.py
+   ```
+
+### Method 2: Official Spotify API
+Use this if you already have an existing Spotify App.
 
 Open `hitster_card_creator.py` and replace the placeholders:
 
@@ -92,19 +111,6 @@ CLIENT_SECRET = "your_client_secret_here"
 Then run:
 ```bash
 python hitster_card_creator.py
-```
-
-### Method 2: Import as a module
-
-```python
-from hitster_card_creator import generate_hitster_cards
-
-generate_hitster_cards(
-    playlist_url="https://open.spotify.com/playlist/YOUR_PLAYLIST_ID",
-    client_id="your_client_id",
-    client_secret="your_client_secret",
-    output_dir="my_cards"
-)
 ```
 
 ## 🔧 Accuracy Fix (Incorrect Years)
