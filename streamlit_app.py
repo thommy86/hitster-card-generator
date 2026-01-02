@@ -67,7 +67,7 @@ st.divider()
 info_col, preview_col = st.columns([1, 1])
 
 with info_col:
-    with st.expander("📖 How do I get links?", expanded=True):
+    with st.expander("How do I get links?", expanded=True):
         st.write("1. Open **Spotify Desktop**.")
         st.write("2. Go to your playlist.")
         st.write("3. Select songs (**Ctrl+A**).")
@@ -76,10 +76,10 @@ with info_col:
 
 with preview_col:
     # Example images to show the "end goal"
-    st.info("💡 **Tip:** Spotify 'Track Links' usually start with `https://open.spotify.com/track/...`")
+    st.info("**Tip:** Spotify 'Track Links' usually start with `https://open.spotify.com/track/...`")
 
 # Input Area with Functional Enhancements
-st.subheader("📥 Input")
+st.subheader("Input")
 
 # Sample Links Button
 st.button("✨ Load Example Links", on_click=set_example_links)
@@ -102,12 +102,12 @@ if link_count > 0:
 else:
     st.warning("No valid track links detected yet.")
 
+
 # --- GENERATION LOGIC ---
-if st.button("🚀 Create My PDF", type="primary"):
+if st.button("Create My PDF", type="primary"):
     if link_count == 0:
         st.error("Please paste some valid Spotify track links first!")
     else:
-        # Corrected link filter for standard Spotify links
         links_to_process = [line.strip() for line in valid_links_found]
         
         with st.status("Working on your cards...", expanded=True) as status:
@@ -122,6 +122,8 @@ if st.button("🚀 Create My PDF", type="primary"):
             st.write("Step 2: Generating high-res cards...")
             progress_bar.progress(0, text="PDF generation starting...")
             
+            # --- THE FIX STARTS HERE ---
+            # Generate the data
             pdf_data = utils.create_pdf_in_memory(
                 song_names, years, artists, valid_links, 
                 progress_bar
@@ -129,7 +131,9 @@ if st.button("🚀 Create My PDF", type="primary"):
             
             status.update(label="All Cards Generated!", state="complete")
             progress_bar.empty()
-            
+
+        # Place the download button INSIDE this block
+        # This ensures it only renders once pdf_data exists
         st.download_button(
             label="💾 Download Printable PDF",
             data=pdf_data,
