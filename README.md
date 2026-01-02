@@ -71,7 +71,7 @@ Use this if you can't get Spotify API keys. It handles playlists of any size (30
 
    Select Songs: Click the first song, press Ctrl + A (to select all).
 
-   Copy: Right-Click > Share > Copy Links to songs.
+   Copy: Ctrl+C
 
    Save: Create a file named links.txt in the project root and paste the links inside.
 
