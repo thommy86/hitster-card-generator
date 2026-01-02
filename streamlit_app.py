@@ -122,8 +122,7 @@ if st.button("Create My PDF", type="primary"):
             st.write("Step 2: Generating high-res cards...")
             progress_bar.progress(0, text="PDF generation starting...")
             
-            # --- THE FIX STARTS HERE ---
-            # Generate the data
+            # 1. Generate the PDF
             pdf_data = utils.create_pdf_in_memory(
                 song_names, years, artists, valid_links, 
                 progress_bar
@@ -132,8 +131,8 @@ if st.button("Create My PDF", type="primary"):
             status.update(label="All Cards Generated!", state="complete")
             progress_bar.empty()
 
-        # Place the download button INSIDE this block
-        # This ensures it only renders once pdf_data exists
+        # 2. Place the download button IMMEDIATELY here
+        # This keeps the 'pdf_data' variable in scope for the download
         st.download_button(
             label="💾 Download Printable PDF",
             data=pdf_data,
@@ -141,3 +140,6 @@ if st.button("Create My PDF", type="primary"):
             mime="application/pdf",
             use_container_width=True
         )
+        
+        # 3. Success message
+        st.balloons()
