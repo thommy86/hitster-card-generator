@@ -54,7 +54,6 @@ Use this if you can't get Spotify API keys. It handles playlists of any size (30
 3. **Run:**
    ```bash
    python hitster_card_creator.py
-   '''
 
 ### Method 2: Official Spotify API
 Use this if you already have an existing Spotify App.
