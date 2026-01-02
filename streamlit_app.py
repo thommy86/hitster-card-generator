@@ -13,9 +13,9 @@ if 'user_input' not in st.session_state:
 
 def set_example_links():
     st.session_state.user_input = (
-        "https://open.spotify.com/track/4uLU6YJuEkVx0vY66E7p59\n"
-        "https://open.spotify.com/track/2G7S81Y6eJidH57X1E6G8R\n"
-        "https://open.spotify.com/track/6Uo9pEskrYvR7C1J6e3C1J"
+        "https://open.spotify.com/track/4PTG3Z6ehGkBFwjybzWkR8?si=44d4b8822cac4dc8\n"
+        "https://open.spotify.com/track/0Bo5fjMtTfCD8vHGebivqc?si=5bc94c4aadf84bca\n"
+        "https://open.spotify.com/track/6Sy9BUbgFse0n0LPA5lwy5?si=ac74b629e3834310"
     )
 
 db = {
