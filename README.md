@@ -1,5 +1,4 @@
 # Hitster Card Generator 🎵
-[![View Sample PDF](https://img.shields.io/badge/View%20Sample-PDF-orange?style=for-the-badge&logo=adobeacrobatreader&logoColor=white)](example_hitster_cards.pdf)
 
 **Generate custom Hitster-style music game cards from any Spotify playlist!**
 
