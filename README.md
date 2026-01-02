@@ -147,10 +147,6 @@ gap_size = 0.2 * cm
 pip install -r requirements.txt
 ```
 
-**Fonts not working:**
-- Install Montserrat fonts (see Installation step 3)
-- Or edit `FONT_PATHS` in the script to point to your fonts
-
 **"Playlist not found" (404 error):**
 - Make sure your playlist is **public** (Spotify API can't access private playlists with client credentials)
 
