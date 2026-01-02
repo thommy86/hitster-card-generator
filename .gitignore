@@ -24,6 +24,8 @@ all_cards.pdf
 *leri.pdf
 *.json
 !config.example.json
+output/*
+!output/.gitkeep
 
 # Temporary files
 test_*.png

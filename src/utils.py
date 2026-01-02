@@ -1,11 +1,6 @@
-"""
-Hitster Card Generator
-Generate custom Hitster-style music game cards from Spotify playlists.
-"""
-
+import io
 import time
 import os
-import json
 import random
 import textwrap
 import re
@@ -19,38 +14,7 @@ from reportlab.lib.pagesizes import A4
 from reportlab.pdfgen import canvas
 from reportlab.lib.utils import ImageReader
 from reportlab.lib.units import cm
-
-
-# =============================================================================
-# CONFIGURATION
-# =============================================================================
-
-# Get the directory where the script is located
-BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-
-# Point to your new fonts folder
-FONT_DIR = os.path.join(BASE_DIR, "fonts")
-
-FONT_PATHS = {
-    'year': os.path.join(FONT_DIR, "Montserrat-Bold.ttf"),
-    'artist': os.path.join(FONT_DIR, "Montserrat-SemiBold.ttf"),
-    'song': os.path.join(FONT_DIR, "Montserrat-MediumItalic.ttf")
-}
-# Color gradient for year-based card colors (oldest to newest)
-COLOR_GRADIENT = [
-    "#7030A0",  # Purple (oldest)
-    "#E31C79",  # Pink
-    "#FF6B9D",  # Light pink
-    "#FFA500",  # Orange
-    "#FFD700",  # Gold
-    "#87CEEB",  # Sky blue
-    "#4169E1",  # Royal blue (newest)
-]
-
-# Card design parameters
-CARD_SIZE = 2000  # pixels
-NEON_COLORS = [(255, 0, 100), (0, 200, 255), (255, 255, 0), (0, 255, 120)]
-
+db = None
 
 # =============================================================================
 # NO-API SCRAPER FUNCTIONS (FALLBACK)
@@ -197,7 +161,7 @@ def create_qr_with_neon_rings(qr_code, output_path):
     """
     Create QR code card with colorful neon rings background.
     """
-    size = CARD_SIZE
+    size = db['card_size']
     img = Image.new("RGB", (size, size), "black")
     draw = ImageDraw.Draw(img)
     
@@ -206,7 +170,7 @@ def create_qr_with_neon_rings(qr_code, output_path):
     max_radius = size // 2 - 50
     
     random.seed(42)  # Reproducible pattern
-    for i, color in enumerate(NEON_COLORS * 2):
+    for i, color in enumerate(db['neon_colors'] * 2):
         radius = max_radius - i * 50
         if radius <= 0:
             break
@@ -252,17 +216,17 @@ def get_year_color(year, all_years):
     percentile = (count_below + count_equal / 2) / len(sorted_years)
     
     # Map to color gradient
-    n_colors = len(COLOR_GRADIENT)
+    n_colors = len(db['color_gradient'])
     idx = percentile * (n_colors - 1)
     idx_low = int(np.floor(idx))
     idx_high = int(np.ceil(idx))
     
     if idx_low == idx_high:
-        return mcolors.hex2color(COLOR_GRADIENT[idx_low])
+        return mcolors.hex2color(db['color_gradient'][idx_low])
     
     # Linear interpolation
-    color_low = mcolors.hex2color(COLOR_GRADIENT[idx_low])
-    color_high = mcolors.hex2color(COLOR_GRADIENT[idx_high])
+    color_low = mcolors.hex2color(db['color_gradient'][idx_low])
+    color_high = mcolors.hex2color(db['color_gradient'][idx_high])
     frac = idx - idx_low
     
     r = color_low[0] + (color_high[0] - color_low[0]) * frac
@@ -276,9 +240,9 @@ def load_fonts():
     """Load Montserrat fonts with cross-platform fallback."""
     # Try Montserrat first
     try:
-        font_year = ImageFont.truetype(FONT_PATHS['year'], 380)
-        font_artist = ImageFont.truetype(FONT_PATHS['artist'], 110)
-        font_song = ImageFont.truetype(FONT_PATHS['song'], 100)
+        font_year = ImageFont.truetype(db['fonts_dict']['year'], 380)
+        font_artist = ImageFont.truetype(db['fonts_dict']['artist'], 110)
+        font_song = ImageFont.truetype(db['fonts_dict']['song'], 100)
         return font_year, font_artist, font_song
     except:
         pass
@@ -317,7 +281,7 @@ def create_solution_side(song_name, artist, year, all_years, output_path):
     """
     Create solution card with year-based color background.
     """
-    size = CARD_SIZE
+    size = db['card_size']
     margin = 150
     max_width = size - (2 * margin)
     
@@ -461,69 +425,227 @@ def create_cards_pdf(cards_folder, output_pdf_path):
 
 
 # =============================================================================
-# FINAL INTEGRATED PIPELINE
+# WEBUTILS
 # =============================================================================
 
-def generate_hitster_cards(playlist_url=None, client_id=None, client_secret=None, output_dir="hitster_cards"):
-    print("=== Hitster Card Generator ===\n")
-    os.makedirs(output_dir, exist_ok=True)
-    json_file = os.path.join(output_dir, "songs.json")
-    links_file = "links.txt"
-
-    # --- DATA FETCHING LOGIC ---
-    if os.path.exists(json_file):
-        print(f"Step 1: Loading local data from {json_file}...")
-        with open(json_file, 'r', encoding='utf-8') as f:
-            data = json.load(f)
-            song_names = [d['name'] for d in data]
-            release_years = [d['year'] for d in data]
-            artists = [d['artist'] for d in data]
-            links = [d['link'] for d in data]
-            
-    elif os.path.exists(links_file):
-        print(f"Step 1: No JSON found. Using {links_file} (Scraper Mode)...")
-        song_names, release_years, artists, links = fetch_no_api_data(links_file)
-        
-        with open(json_file, 'w', encoding='utf-8') as f:
-            data = [{'name': n, 'year': y, 'artist': a, 'link': l} 
-                    for n, y, a, l in zip(song_names, release_years, artists, links)]
-            json.dump(data, f, indent=2)
-
-    elif client_id and client_secret and playlist_url:
-        print("Step 1: Fetching from Spotify API...")
-        playlist_data = fetch_spotify_playlist(playlist_url, client_id, client_secret)
-        song_names, release_years, artists, links = parse_playlist_data(playlist_data)
-        
-        with open(json_file, 'w', encoding='utf-8') as f:
-            data = [{'name': n, 'year': y, 'artist': a, 'link': l} 
-                    for n, y, a, l in zip(song_names, release_years, artists, links)]
-            json.dump(data, f, indent=2)
-    else:
-        print("ERROR: No API credentials AND no links.txt found.")
-        return
-
-    # --- CARD GENERATION ---
-    print(f"\nStep 2: Generating {len(song_names)} cards...")
-    for i, (link, name, artist, year) in enumerate(zip(links, song_names, artists, release_years)):
-        qr_path = f"{output_dir}/card_{i+1:03d}_qr.png"
-        sol_path = f"{output_dir}/card_{i+1:03d}_solution.png"
-        
-        qr_code = create_qr_code(link)
-        create_qr_with_neon_rings(qr_code, qr_path)
-        create_solution_side(name, artist, year, release_years, sol_path)
-        if (i + 1) % 20 == 0:
-            print(f"  Progress: {i+1}/{len(song_names)}...")
-
-    # --- PDF CREATION ---
-    print("\nStep 3: Creating PDF...")
-    pdf_path = f"{output_dir}.pdf"
-    create_cards_pdf(output_dir, pdf_path)
-    print(f"\n✓ Done! PDF ready at: {pdf_path}")
-
-if __name__ == "__main__":
-    # If API is down, you can leave these blank and just have 'links.txt' ready
-    PLAYLIST_URL = "" 
-    CLIENT_ID = ""
-    CLIENT_SECRET = ""
+def create_qr_with_neon_rings_in_memory(qr_code):
+    """
+    Create QR code card with colorful neon rings background.
+    """
+    size = db['card_size']
+    img = Image.new("RGB", (size, size), "black")
+    draw = ImageDraw.Draw(img)
     
-    generate_hitster_cards(PLAYLIST_URL, CLIENT_ID, CLIENT_SECRET)
+    # Draw neon rings
+    center = size // 2
+    max_radius = size // 2 - 50
+    
+    random.seed(42)  # Reproducible pattern
+    for i, color in enumerate(db['neon_colors'] * 2):
+        radius = max_radius - i * 50
+        if radius <= 0:
+            break
+        
+        # Draw arc with random gaps
+        num_gaps = random.randint(1, 3)
+        for gap in range(num_gaps):
+            gap_start = random.randint(0, 360)
+            gap_length = random.randint(20, 60)
+            
+            draw.arc(
+                (center - radius, center - radius, center + radius, center + radius),
+                start=0, end=360, fill=color, width=12
+            )
+            draw.arc(
+                (center - radius, center - radius, center + radius, center + radius),
+                start=gap_start, end=gap_start + gap_length, fill="black", width=12
+            )
+    
+    # Overlay QR code
+    qr_size = int(size * 0.45)
+    qr_code_rgb = qr_code.convert('RGB')
+    qr_code_resized = qr_code_rgb.resize((qr_size, qr_size), Image.Resampling.LANCZOS)
+    
+    # Create transparency mask (white = opaque, black = transparent)
+    qr_array = qr_code_resized.convert('L')
+    mask = qr_array.point(lambda x: 255 if x > 128 else 0, mode='1')
+    
+    img.paste(qr_code_resized, (center - qr_size // 2, center - qr_size // 2), mask)
+    
+    return img
+
+def create_solution_side_in_memory(song_name, artist, year, all_years):
+    """
+    Create solution card and return the PIL Image object directly.
+    """
+    size = db['card_size']
+    margin = 150
+    max_width = size - (2 * margin)
+    
+    # Get color for this year
+    color_rgb = get_year_color(year, all_years)
+    color_int = tuple(int(c * 255) for c in color_rgb)
+    
+    # Create the base image
+    img = Image.new("RGB", (size, size), color_int)
+    draw = ImageDraw.Draw(img)
+    
+    font_year, font_artist, font_song = load_fonts()
+    
+    def get_fitted_text_in_memory(text, font, max_width):
+        """Wrap text to fit within max_width."""
+        bbox = draw.textbbox((0, 0), text, font=font)
+        text_width = bbox[2] - bbox[0]
+        
+        if text_width <= max_width:
+            return text
+        
+        avg_char_width = text_width / len(text)
+        chars_per_line = int(max_width / avg_char_width * 0.85)
+        wrapped = '\n'.join(textwrap.wrap(text, width=max(chars_per_line, 10)))
+        
+        return wrapped
+    
+    # Prepare text
+    song_text = get_fitted_text_in_memory(song_name, font_song, max_width)
+    artist_text = get_fitted_text_in_memory(artist, font_artist, max_width)
+    year_text = str(year)
+    
+    # Draw centered text
+    gap = 400
+    center_x = size / 2
+    center_y = size / 2
+    
+    draw.text((center_x, center_y), year_text, fill="black", 
+             font=font_year, anchor="mm")
+    
+    artist_y = center_y - gap
+    if '\n' in artist_text:
+        draw.multiline_text((center_x, artist_y), artist_text, fill="black",
+                          font=font_artist, align="center", anchor="mm")
+    else:
+        draw.text((center_x, artist_y), artist_text, fill="black",
+                 font=font_artist, anchor="mm")
+    
+    song_y = center_y + gap
+    if '\n' in song_text:
+        draw.multiline_text((center_x, song_y), song_text, fill="black",
+                          font=font_song, align="center", anchor="mm")
+    else:
+        draw.text((center_x, song_y), song_text, fill="black",
+                 font=font_song, anchor="mm")
+    
+    # IMPORTANT: Return the PIL Image object instead of saving to a file
+    return img
+
+
+def fetch_no_api_data_from_list(urls, progress_bar=None):
+    """
+    Scrapes metadata from public Spotify pages based on a provided list of URLs.
+    """
+    songs, years, artists, valid_links = [], [], [], []
+    total = len(urls)
+    
+    for i, url in enumerate(urls):
+        try:
+            headers = {'User-Agent': 'Mozilla/5.0'}
+            res = requests.get(url, headers=headers, timeout=5)
+            soup = BeautifulSoup(res.text, 'html.parser')
+            
+            # Extract metadata from OpenGraph tags
+            title = soup.find("meta", property="og:title")['content']
+            desc = soup.find("meta", property="og:description")['content']
+            artist = desc.split(" · ")[0]
+            
+            # Get year from iTunes helper (make sure this function is in utils.py too)
+            year_str = get_year_from_itunes(artist, title)
+            year = int(year_str) if year_str != "0000" else 2000
+            
+            songs.append(title)
+            artists.append(artist)
+            years.append(year)
+            valid_links.append(url)
+            # Update Progress
+            if progress_bar:
+                percent = (i + 1) / total
+                progress_bar.progress(percent, text=f"Scraped {i+1}/{total}: {title[:30]}...")
+        except:
+            continue
+            
+    return songs, years, artists, valid_links
+            
+
+
+def create_pdf_in_memory(song_names, years, artists, links, progress_bar=None):
+    if not song_names:
+        return None
+
+    buffer = io.BytesIO()
+    c = canvas.Canvas(buffer, pagesize=A4)
+    width, height = A4
+    
+    # Grid Settings (5x5 cm cards)
+    card_size = 5 * cm
+    cols, rows = 4, 5  # 20 cards per page
+    margin_x = (width - (cols * card_size)) / 2
+    margin_y = (height - (rows * card_size)) / 2
+
+    total_cards = len(song_names)
+
+    for i in range(0, total_cards, 20):
+        # Slice the data for this specific page
+        batch_links = links[i:i+20]
+        batch_info = list(zip(song_names[i:i+20], artists[i:i+20], years[i:i+20]))
+
+        # --- PAGE 1: FRONT (QR CODES) ---
+        # --- Inside create_pdf_in_memory ---
+        for idx, link in enumerate(batch_links):
+            col = idx % cols
+            row = (idx // cols) 
+            x = margin_x + col * card_size
+            y = height - margin_y - (row + 1) * card_size
+            
+            # STEP 1: Turn the URL string into a QR Image object
+            base_qr = create_qr_code(link) 
+            
+            # STEP 2: Pass that IMAGE object to the neon rings function
+            qr_pil = create_qr_with_neon_rings_in_memory(base_qr) 
+            
+            img_byte_arr = io.BytesIO()
+            qr_pil.save(img_byte_arr, format='PNG')
+            img_byte_arr.seek(0)
+            
+            c.drawImage(ImageReader(img_byte_arr), x, y, width=card_size, height=card_size)
+        
+        c.showPage() # Finish the Front page
+
+        # --- PAGE 2: BACK (SOLUTIONS - MIRRORED) ---
+        for idx, (name, artist, year) in enumerate(batch_info):
+            orig_col = idx % cols
+            mirrored_col = (cols - 1) - orig_col # Flip horizontally for duplex
+            row = (idx // cols)
+            
+            x = margin_x + mirrored_col * card_size
+            y = height - margin_y - (row + 1) * card_size
+            
+            # 1. Generate Solution Image
+            # IMPORTANT: Ensure your create_solution_side returns a PIL Image!
+            sol_pil = create_solution_side_in_memory(name, artist, year, years) 
+            sol_byte_arr = io.BytesIO()
+            sol_pil.save(sol_byte_arr, format='PNG')
+            sol_byte_arr.seek(0)
+            
+            # 2. Draw to Canvas
+            c.drawImage(ImageReader(sol_byte_arr), x, y, width=card_size, height=card_size)
+
+        if progress_bar:
+            processed = min(i + 20, total_cards)
+            percent = processed / total_cards
+            progress_bar.progress(percent, text=f"Generated {processed}/{total_cards} cards...")
+        c.showPage() # Finish the Back page
+
+    c.save()
+    pdf_data = buffer.getvalue()
+    buffer.close()
+    return pdf_data
+
