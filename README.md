@@ -53,7 +53,7 @@ The script generates a PDF optimized for duplex printing (the backs are mirrored
 The easiest way to generate cards is via my free to use live web app:
 👉 **[Hitster Card Generator](https://hitster-card-generator.streamlit.app/)**
 
-1. **Copy Links**: In Spotify Desktop, go into your playlist, select your songs with 'Ctrl+A' and press `Ctrl+C`.
+1. **Copy Links**: In Spotify Desktop, go into your playlist, select your songs with 'Ctrl+A' and press 'Ctrl+C'.
 2. **Paste**: Enter the links into the web app text area.
 3. **Download**: Click "Create My PDF" and save your high-res printable file.
 
@@ -64,7 +64,7 @@ If you need 100% original release dates: Please use Method 2 (Local Script), whi
 ### Method 2: No-API Scraper (Patch for current problems with unavailable Spotify API keys)
 Use this if you can't get Spotify API keys. It handles playlists of any size (300+ songs).
 
-1. **Collect Links:** Open the Spotify Desktop App, select your songs (`Ctrl+A`), and ('Ctrl+C').
+1. **Collect Links:** Open the Spotify Desktop App, select your songs ('Ctrl+A'), and ('Ctrl+C').
 2. **Save Links:** Create a file named `links.txt` in the project root and paste the links inside.
 3. **Run:**
    ```bash
