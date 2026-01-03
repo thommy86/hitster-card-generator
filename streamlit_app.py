@@ -135,7 +135,9 @@ if st.button("Create My PDF", type="primary"):
                 links_to_process, 
                 progress_bar
             )
-            
+            if -1 in years:
+                st.warning("🕵️ Some years couldn't be found automatically and are marked as '-1'. "
+               "You might want to check the PDF or use the 'Accuracy Fix' on GitHub.")
             st.write("Step 2: Generating high-res cards...")
             progress_bar.progress(0, text="PDF generation starting...")
             

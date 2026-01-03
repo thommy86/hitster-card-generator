@@ -559,7 +559,7 @@ def fetch_no_api_data_from_list(urls, progress_bar=None):
             
             # Get year from iTunes helper (make sure this function is in utils.py too)
             year_str = get_year_from_itunes(artist, title)
-            year = int(year_str) if year_str != "0000" else 2000
+            year = int(year_str) if year_str != "0000" else -1
             
             songs.append(title)
             artists.append(artist)
