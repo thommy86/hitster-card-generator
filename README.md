@@ -136,6 +136,24 @@ The script generates:
 
 ## Customization
 
+Copy the `.env.example` file to `.env` (this allows to set spotify credentials and use `git` to manage your changes without commiting the secrets to git!).
+
+The `.env` file can then be used to configure the creation of the cards
+
+### Save Ink
+
+* `INK_SAVING_MODE`: if enabled, the QR code side is also printed white and the solution side cards are not filled, but only marked with a thick frame in the solution color.
+* `CARD_DRAW_BORDER`: if enabled, the QR side of the cards gets a black or white border (depending on background color).
+
+```bash
+# layout of cards:
+# print the qr cards in ink saving mode (white background, black qr code)
+INK_SAVING_MODE=true
+# draw border around the qr cards for easier cutting
+CARD_DRAW_BORDER=true
+```
+
+
 ### Change color gradient
 Edit the `COLOR_GRADIENT` list in the script:
 ```python

@@ -1,3 +1,5 @@
+#!/usr/bin/env python3
+
 """
 Hitster Card Generator
 Generate custom Hitster-style music game cards from Spotify playlists.
@@ -9,6 +11,7 @@ import json
 import random
 import textwrap
 import re
+from dotenv import load_dotenv
 import qrcode
 import requests
 import numpy as np
@@ -121,9 +124,23 @@ def generate_hitster_cards(db, playlist_url=None, client_id=None, client_secret=
     print(f"\n✓ Done! PDF ready at: {pdf_path}")
 
 if __name__ == "__main__":
+
     # If API is down, you can leave these blank and just have 'links.txt' ready
-    PLAYLIST_URL = "" 
-    CLIENT_ID = ""
-    CLIENT_SECRET = ""
+    load_dotenv()  # take environment variables from .env file
+
+    PLAYLIST_URL = os.getenv("PLAYLIST_URL", "")
+    CLIENT_ID = os.getenv("CLIENT_ID", "")
+    CLIENT_SECRET = os.getenv("CLIENT_SECRET", "")
+
+    # Default values are the original settings:
+    INK_SAVING_MODE = os.getenv("INK_SAVING_MODE", "False").lower() == "true"
+    CARD_DRAW_BORDER = os.getenv("CARD_DRAW_BORDER", "False").lower() == "true"
+
+    db['ink_saving_mode'] = INK_SAVING_MODE
+    db['card_draw_border'] = CARD_DRAW_BORDER
+    db['card_background_color'] = 'white' if INK_SAVING_MODE else 'black'
+    db['card_border_color'] = 'black' if INK_SAVING_MODE else 'white'
+
+    print(f"Using client id {CLIENT_ID} to fetch playlist url {PLAYLIST_URL}...")
     
     generate_hitster_cards(db, PLAYLIST_URL, CLIENT_ID, CLIENT_SECRET)

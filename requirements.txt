@@ -5,4 +5,5 @@ pillow
 qrcode
 reportlab
 requests
+dotenv
 streamlit

@@ -161,45 +161,7 @@ def create_qr_with_neon_rings(qr_code, output_path):
     """
     Create QR code card with colorful neon rings background.
     """
-    size = db['card_size']
-    img = Image.new("RGB", (size, size), "black")
-    draw = ImageDraw.Draw(img)
-    
-    # Draw neon rings
-    center = size // 2
-    max_radius = size // 2 - 50
-    
-    random.seed(42)  # Reproducible pattern
-    for i, color in enumerate(db['neon_colors'] * 2):
-        radius = max_radius - i * 50
-        if radius <= 0:
-            break
-        
-        # Draw arc with random gaps
-        num_gaps = random.randint(1, 3)
-        for gap in range(num_gaps):
-            gap_start = random.randint(0, 360)
-            gap_length = random.randint(20, 60)
-            
-            draw.arc(
-                (center - radius, center - radius, center + radius, center + radius),
-                start=0, end=360, fill=color, width=12
-            )
-            draw.arc(
-                (center - radius, center - radius, center + radius, center + radius),
-                start=gap_start, end=gap_start + gap_length, fill="black", width=12
-            )
-    
-    # Overlay QR code
-    qr_size = int(size * 0.45)
-    qr_code_rgb = qr_code.convert('RGB')
-    qr_code_resized = qr_code_rgb.resize((qr_size, qr_size), Image.Resampling.LANCZOS)
-    
-    # Create transparency mask (white = opaque, black = transparent)
-    qr_array = qr_code_resized.convert('L')
-    mask = qr_array.point(lambda x: 255 if x > 128 else 0, mode='1')
-    
-    img.paste(qr_code_resized, (center - qr_size // 2, center - qr_size // 2), mask)
+    img = create_qr_with_neon_rings_in_memory(qr_code)
     img.save(output_path)
     return output_path
 
@@ -281,65 +243,9 @@ def create_solution_side(song_name, artist, year, all_years, output_path):
     """
     Create solution card with year-based color background.
     """
-    size = db['card_size']
-    margin = 150
-    max_width = size - (2 * margin)
-    
-    # Get color for this year
-    color_rgb = get_year_color(year, all_years)
-    color_int = tuple(int(c * 255) for c in color_rgb)
-    
-    img = Image.new("RGB", (size, size), color_int)
-    draw = ImageDraw.Draw(img)
-    
-    font_year, font_artist, font_song = load_fonts()
-    
-    def get_fitted_text(text, font, max_width):
-        """Wrap text to fit within max_width."""
-        bbox = draw.textbbox((0, 0), text, font=font)
-        text_width = bbox[2] - bbox[0]
-        
-        if text_width <= max_width:
-            return text
-        
-        avg_char_width = text_width / len(text)
-        chars_per_line = int(max_width / avg_char_width * 0.85)
-        wrapped = '\n'.join(textwrap.wrap(text, width=max(chars_per_line, 10)))
-        
-        return wrapped
-    
-    # Prepare text
-    song_text = get_fitted_text(song_name, font_song, max_width)
-    artist_text = get_fitted_text(artist, font_artist, max_width)
-    year_text = str(year)
-    
-    # Draw centered text
-    gap = 400
-    center_x = size / 2
-    center_y = size / 2
-    
-    draw.text((center_x, center_y), year_text, fill="black", 
-             font=font_year, anchor="mm")
-    
-    artist_y = center_y - gap
-    if '\n' in artist_text:
-        draw.multiline_text((center_x, artist_y), artist_text, fill="black",
-                          font=font_artist, align="center", anchor="mm")
-    else:
-        draw.text((center_x, artist_y), artist_text, fill="black",
-                 font=font_artist, anchor="mm")
-    
-    song_y = center_y + gap
-    if '\n' in song_text:
-        draw.multiline_text((center_x, song_y), song_text, fill="black",
-                          font=font_song, align="center", anchor="mm")
-    else:
-        draw.text((center_x, song_y), song_text, fill="black",
-                 font=font_song, anchor="mm")
-    
+    img = create_solution_side_in_memory(song_name, artist, year, all_years)    
     img.save(output_path)
     return output_path
-
 
 # =============================================================================
 # PDF GENERATION
@@ -379,8 +285,11 @@ def create_cards_pdf(cards_folder, output_pdf_path):
         start_card = page_idx * cards_per_page
         end_card = min(start_card + cards_per_page, len(qr_images))
         
-        # FRONT PAGE (QR codes) - black background
-        c.setFillColorRGB(0, 0, 0)
+        # FRONT PAGE (QR codes)
+        if db['ink_saving_mode']: # FIXME: should be always white?
+            c.setFillColorRGB(1, 1, 1) # white
+        else:
+            c.setFillColorRGB(0, 0, 0) # black
         c.rect(0, 0, width, height, stroke=0, fill=1)
         
         for card_idx in range(start_card, end_card):
@@ -433,7 +342,21 @@ def create_qr_with_neon_rings_in_memory(qr_code):
     Create QR code card with colorful neon rings background.
     """
     size = db['card_size']
-    img = Image.new("RGB", (size, size), "black")
+    background_color = db['card_background_color']
+    border_color = db['card_border_color']
+    draw_border = db['card_draw_border']
+    img = Image.new("RGB", (size, size), background_color)
+    # draw border around the card for easier cutting
+    if draw_border:
+        border_draw = ImageDraw.Draw(img)
+        border_width = 20
+        border_color = border_color
+        border_draw.rectangle(
+            [(border_width, border_width), (size - border_width, size - border_width)],
+            outline=border_color,
+            width=border_width
+        )
+
     draw = ImageDraw.Draw(img)
     
     # Draw neon rings
@@ -466,11 +389,33 @@ def create_qr_with_neon_rings_in_memory(qr_code):
     qr_code_rgb = qr_code.convert('RGB')
     qr_code_resized = qr_code_rgb.resize((qr_size, qr_size), Image.Resampling.LANCZOS)
     
-    # Create transparency mask (white = opaque, black = transparent)
-    qr_array = qr_code_resized.convert('L')
-    mask = qr_array.point(lambda x: 255 if x > 128 else 0, mode='1')
+    # Create a robust module mask (True where QR modules are present),
+    # independent of whether modules are light or dark in the supplied image.
+    qr_l = qr_code_resized.convert('L')
+    arr = np.array(qr_l)
+    # dark_mask = True where pixels are dark (<128)
+    dark_mask = arr < 128
+    num_dark = dark_mask.sum()
+    total = arr.size
+    # Modules usually occupy the minority of pixels; assume the smaller group corresponds to modules.
+    if num_dark < total / 2:
+        modules_mask = dark_mask
+    else:
+        modules_mask = ~dark_mask
+
+    # Convert boolean mask to a PIL mask (255 = opaque)
+    mask_img = Image.fromarray((modules_mask.astype('uint8') * 255)).convert('1')
     
-    img.paste(qr_code_resized, (center - qr_size // 2, center - qr_size // 2), mask)
+    # Choose module color that contrasts with the background area where the QR will be placed.
+    left = center - qr_size // 2
+    top = center - qr_size // 2
+    bg_crop = img.crop((left, top, left + qr_size, top + qr_size)).convert('L')
+    bg_mean = np.array(bg_crop).mean()
+    module_color = (0, 0, 0) if bg_mean > 127 else (255, 255, 255)
+    
+    # Create a solid overlay for modules and paste it using the mask so only module pixels are drawn.
+    overlay = Image.new('RGB', (qr_size, qr_size), module_color)
+    img.paste(overlay, (left, top), mask_img)
     
     return img
 
@@ -487,7 +432,14 @@ def create_solution_side_in_memory(song_name, artist, year, all_years):
     color_int = tuple(int(c * 255) for c in color_rgb)
     
     # Create the base image
-    img = Image.new("RGB", (size, size), color_int)
+    ink_saving_mode = db['ink_saving_mode']
+    background_color = db['card_background_color'] if ink_saving_mode else color_int
+
+    img = Image.new("RGB", (size, size), background_color)
+    if ink_saving_mode:
+        # draw border in the correct color only in ink saving mode
+        draw = ImageDraw.Draw(img)
+        draw.rectangle([(0, 0), (size - 1, size - 1)], outline=color_int, width=100)
     draw = ImageDraw.Draw(img)
     
     font_year, font_artist, font_song = load_fonts()
