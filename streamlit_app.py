@@ -26,7 +26,12 @@ db = {
     },
     "color_gradient": ["#7030A0", "#E31C79", "#FF6B9D", "#FFA500", "#FFD700", "#87CEEB", "#4169E1"],
     "card_size": 2000, 
-    "neon_colors": [(255, 0, 100), (0, 200, 255), (255, 255, 0), (0, 255, 120)]
+    "neon_colors": [(255, 0, 100), (0, 200, 255), (255, 255, 0), (0, 255, 120)],
+    # FIXME: allow to set from UI:
+    "ink_saving_mode": False,
+    "card_draw_border": False,
+    "card_background_color": "black",
+    "card_border_color": "white",
 }
 utils.db = db
 
@@ -131,10 +136,8 @@ if st.button("Create My PDF", type="primary"):
             st.write("Step 1: Scraping metadata...")
             progress_bar = st.progress(0, text="Scraping starting...")
             
-            song_names, years, artists, valid_links = utils.fetch_no_api_data_from_list(
-                links_to_process, 
-                progress_bar
-            )
+            songs = utils.fetch_no_api_data_from_list(links_to_process, progress_bar)
+            years = [song['year'] for song in songs]
             if -1 in years:
                 st.warning("🕵️ Some years couldn't be found automatically and are marked as '-1'. "
                "You might want to check the PDF or use the 'Accuracy Fix' on GitHub.")
@@ -142,10 +145,7 @@ if st.button("Create My PDF", type="primary"):
             progress_bar.progress(0, text="PDF generation starting...")
             
             # 1. Generate the PDF
-            pdf_data = utils.create_pdf_in_memory(
-                song_names, years, artists, valid_links, 
-                progress_bar
-            )
+            pdf_data = utils.create_pdf_in_memory(songs, progress_bar)
             
             status.update(label="All Cards Generated!", state="complete")
             progress_bar.empty()

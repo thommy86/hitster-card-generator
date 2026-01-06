@@ -7,6 +7,7 @@ import re
 import qrcode
 import requests
 import numpy as np
+import urllib.parse
 from bs4 import BeautifulSoup
 from PIL import Image, ImageOps, ImageDraw, ImageFont
 import matplotlib.colors as mcolors
@@ -17,21 +18,66 @@ from reportlab.lib.units import cm
 db = None
 
 # =============================================================================
+# Correction of year fetching functions to use MusicBrainz and iTunes APIs
+# =============================================================================
+def get_year_from_musicbrainz(title, artist) -> int | None:
+    q = f'recording:"{title}" AND artist:"{artist}"'
+    params = {"query": q, "fmt": "json", "limit": 5}
+    headers = {"User-Agent": "hitster-card-fix/1.0 (you@example.com)"}
+    try:
+        r = requests.get(MB_WS, params=params, headers=headers, timeout=10)
+        r.raise_for_status()
+        result_json = r.json()
+        years = []
+        if not result_json or "recordings" not in result_json:
+            return None
+        for rec in result_json.get("recordings", []):
+            # releases may be embedded
+            for rel in rec.get("releases", []) or []:
+                date = rel.get("date")
+                if date:
+                    years.append(int(date.split("-")[0]))
+        if not years:
+            return None
+        return min(years)
+    except Exception:
+        return None
+
+def get_year_from_itunes(title, artist) -> int | None:
+    q = urllib.parse.quote(f"{artist} {title}")
+    url = f"https://itunes.apple.com/search?term={q}&entity=song&limit=5"
+    try:
+        r = requests.get(url, timeout=8)
+        r.raise_for_status()
+        result_json = r.json()
+        if not result_json or "results" not in result_json:
+            return None
+        years = []
+        for res in result_json.get("results", []):
+            rd = res.get("releaseDate")
+            if rd:
+                years.append(int(rd.split("-")[0]))
+        if not years:
+            return None
+        return min(years)
+    except Exception:
+        return None
+    
+def get_year_and_source(title, artist, orig_year) -> tuple[int | None, str | None]:
+    """Get release year and source ('iTunes' or 'MusicBrainz') for a song."""
+    itunes_year = get_year_from_itunes(title, artist)
+    if itunes_year is not None:
+        return itunes_year, 'iTunes'
+    
+    musicbrainz_year = get_year_from_musicbrainz(title, artist)
+    if musicbrainz_year is not None:
+        return musicbrainz_year, 'MusicBrainz'
+    
+    return orig_year, 'Spotify'
+
+# =============================================================================
 # NO-API SCRAPER FUNCTIONS (FALLBACK)
 # =============================================================================
-
-def get_year_from_itunes(artist, title):
-    """Pings iTunes API to find the release year."""
-    query = f"{artist} {title}".replace(" ", "+")
-    itunes_url = f"https://itunes.apple.com/search?term={query}&entity=song&limit=1"
-    try:
-        res = requests.get(itunes_url, timeout=5)
-        results = res.json().get('results', [])
-        if results:
-            return results[0]['releaseDate'].split('-')[0]
-    except:
-        pass
-    return "0000"
 
 def fetch_no_api_data(links_file):
     """Scrapes metadata from public Spotify pages based on links.txt."""
@@ -42,34 +88,7 @@ def fetch_no_api_data(links_file):
     with open(links_file, 'r') as f:
         urls = [line.strip() for line in f.readlines() if 'spotify.com/track/' in line]
 
-    songs, years, artists, links = [], [], [], []
-    
-    for i, url in enumerate(urls, 1):
-        print(f"  [{i}/{len(urls)}] Scraping: {url}")
-        headers = {'User-Agent': 'Mozilla/5.0'}
-        try:
-            res = requests.get(url, headers=headers, timeout=5)
-            soup = BeautifulSoup(res.text, 'html.parser')
-            
-            # Metadata from OpenGraph tags
-            title = soup.find("meta", property="og:title")['content']
-            desc = soup.find("meta", property="og:description")['content']
-            artist = desc.split(" · ")[0]
-            
-            year_str = get_year_from_itunes(artist, title)
-            year = int(year_str) if year_str != "0000" else -1000
-            
-            songs.append(title)
-            artists.append(artist)
-            years.append(year)
-            links.append(url)
-            
-            print(f"{year} | {artist} - {title}")
-            time.sleep(0.5)
-        except Exception as e:
-            print(f"Error: {e}")
-            
-    return songs, years, artists, links
+    return fetch_no_api_data_from_list(urls)
 
 # =============================================================================
 # SPOTIFY API FUNCTIONS
@@ -129,19 +148,35 @@ def parse_playlist_data(playlist_data):
     Extract song information from playlist data.
     
     Returns:
-        tuple: (song_names, release_years, artists, links)
+        array of songs ('name', 'year', 'artist', 'link')
     """
     tracks = playlist_data['tracks']['items']
-    
-    song_names = [item['track']['name'] for item in tracks]
-    release_dates = [item['track']['album']['release_date'] for item in tracks]
-    artists = [item['track']['artists'][0]['name'] for item in tracks]
-    links = [item['track']['external_urls']['spotify'] for item in tracks]
-    
-    # Extract only year from release date
-    release_years = [int(date.split("-")[0]) for date in release_dates]
-    
-    return song_names, release_years, artists, links
+
+    songs = []
+
+    for item in tracks:
+        track = item['track']
+
+        name = track['name']
+        artist = track['artists'][0]['name']
+        release_date = track['album']['release_date']
+        spotify_year = int(release_date.split("-")[0])
+        year = spotify_year # default
+        
+        # Try to get more accurate year from MusicBrainz or iTunes   
+        year, year_source = get_year_and_source(name, artist, spotify_year)     
+
+        song = {}
+        song['name'] = name
+        song['original_year'] = spotify_year
+        song['year'] = year
+        song['year_source'] = year_source
+        song['artist'] = artist
+        song['link'] = track['external_urls']['spotify']
+        song['album'] = track['album']['name']
+        songs.append(song)
+        
+    return songs
 
 
 # =============================================================================
@@ -495,41 +530,50 @@ def fetch_no_api_data_from_list(urls, progress_bar=None):
     """
     Scrapes metadata from public Spotify pages based on a provided list of URLs.
     """
-    songs, years, artists, valid_links = [], [], [], []
-    total = len(urls)
+
+    songs = []
     
-    for i, url in enumerate(urls):
+    for i, url in enumerate(urls, 1):
+        print(f"  [{i}/{len(urls)}] Scraping: {url}")
+        headers = {'User-Agent': 'Mozilla/5.0'}
         try:
-            headers = {'User-Agent': 'Mozilla/5.0'}
             res = requests.get(url, headers=headers, timeout=5)
             soup = BeautifulSoup(res.text, 'html.parser')
             
-            # Extract metadata from OpenGraph tags
+            # Metadata from OpenGraph tags
             title = soup.find("meta", property="og:title")['content']
             desc = soup.find("meta", property="og:description")['content']
             artist = desc.split(" · ")[0]
             
-            # Get year from iTunes helper (make sure this function is in utils.py too)
-            year_str = get_year_from_itunes(artist, title)
-            year = int(year_str) if year_str != "0000" else -1
+            year, year_source = get_year_and_source(artist, title, -1000)
+            song = {}
+            song['name'] = title
+            song['original_year'] = 0
+            song['year'] = year
+            song['year_source'] = year_source
+            song['artist'] = artist
+            song['link'] = url
             
-            songs.append(title)
-            artists.append(artist)
-            years.append(year)
-            valid_links.append(url)
+            songs.append(song)
+            
+            print(f"{year} | {artist} - {title}")
+            time.sleep(0.5)
             # Update Progress
             if progress_bar:
                 percent = (i + 1) / total
                 progress_bar.progress(percent, text=f"Scraped {i+1}/{total}: {title[:30]}...")
-        except:
-            continue
+
+        except Exception as e:
+            print(f"Error: {e}")
             
-    return songs, years, artists, valid_links
+    return songs
+
+
             
 
 
-def create_pdf_in_memory(song_names, years, artists, links, progress_bar=None):
-    if not song_names:
+def create_pdf_in_memory(songs, progress_bar=None):
+    if not songs:
         return None
 
     buffer = io.BytesIO()
@@ -542,23 +586,23 @@ def create_pdf_in_memory(song_names, years, artists, links, progress_bar=None):
     margin_x = (width - (cols * card_size)) / 2
     margin_y = (height - (rows * card_size)) / 2
 
-    total_cards = len(song_names)
+    total_cards = len(songs)
+    years = [song['year'] for song in songs]
 
     for i in range(0, total_cards, 20):
         # Slice the data for this specific page
-        batch_links = links[i:i+20]
-        batch_info = list(zip(song_names[i:i+20], artists[i:i+20], years[i:i+20]))
+        batch_songs = list(songs[i:i+20])
 
         # --- PAGE 1: FRONT (QR CODES) ---
         # --- Inside create_pdf_in_memory ---
-        for idx, link in enumerate(batch_links):
+        for idx, song in enumerate(batch_songs):
             col = idx % cols
             row = (idx // cols) 
             x = margin_x + col * card_size
             y = height - margin_y - (row + 1) * card_size
             
             # STEP 1: Turn the URL string into a QR Image object
-            base_qr = create_qr_code(link) 
+            base_qr = create_qr_code(song['link']) 
             
             # STEP 2: Pass that IMAGE object to the neon rings function
             qr_pil = create_qr_with_neon_rings_in_memory(base_qr) 
@@ -572,7 +616,7 @@ def create_pdf_in_memory(song_names, years, artists, links, progress_bar=None):
         c.showPage() # Finish the Front page
 
         # --- PAGE 2: BACK (SOLUTIONS - MIRRORED) ---
-        for idx, (name, artist, year) in enumerate(batch_info):
+        for idx, song in enumerate(batch_songs):
             orig_col = idx % cols
             mirrored_col = (cols - 1) - orig_col # Flip horizontally for duplex
             row = (idx // cols)
@@ -582,7 +626,7 @@ def create_pdf_in_memory(song_names, years, artists, links, progress_bar=None):
             
             # 1. Generate Solution Image
             # IMPORTANT: Ensure your create_solution_side returns a PIL Image!
-            sol_pil = create_solution_side_in_memory(name, artist, year, years) 
+            sol_pil = create_solution_side_in_memory(song['name'], song['artist'], song['year'], years) 
             sol_byte_arr = io.BytesIO()
             sol_pil.save(sol_byte_arr, format='PNG')
             sol_byte_arr.seek(0)
