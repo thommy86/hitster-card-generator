@@ -57,7 +57,7 @@ The easiest way to generate cards is via my free to use live web app:
 2. **Paste**: Enter the links into the web app text area.
 3. **Download**: Click "Create My PDF" and save your high-res printable file.
 
-[!TIP] A Note on Accuracy (Web App): When using the Web Interface, the years are pulled directly from Spotify/iTunes metadata. While highly convenient, these sources occasionally provide "Remaster" or "Re-release" years.
+>[!TIP] A Note on Accuracy (Web App): When using the Web Interface, the years are pulled directly from Spotify/iTunes metadata. While highly convenient, these sources occasionally provide "Remaster" or "Re-release" years.
 
 If you need 100% original release dates: Please use Method 2 (Local Script), which allows you to review and edit the songs.json metadata before the final PDF is generated.
 
@@ -74,7 +74,7 @@ Use this if you can't get Spotify API keys. It handles playlists of any size (30
 ### Method 3: Official Spotify API
 Use this if you already have an existing Spotify App.
 
-Create an `.env' file with the instructions of given in the '.env.example' file
+Create an `.env` file with the instructions of given in the `.env.example` file
 
 Then run:
 ```bash
