@@ -167,7 +167,8 @@ def parse_playlist_data(playlist_data):
         year, year_source = get_year_and_source(name, artist, spotify_year)     
 
         song = {}
-        song['name'] = name
+        song['name'] = sanitize_name(name)
+        song['original_name'] = name
         song['original_year'] = spotify_year
         song['year'] = year
         song['year_source'] = year_source
@@ -177,6 +178,20 @@ def parse_playlist_data(playlist_data):
         songs.append(song)
         
     return songs
+
+def sanitize_name(name):
+    """Remove remastered info from title: """
+    sanitized = re.sub(r'\s?-\s?\d{4} remaster(ed)?', '', name, flags=re.IGNORECASE)
+    sanitized = re.sub(r'\s?/\s?\d{4} remaster(ed)?', '', sanitized, flags=re.IGNORECASE)
+    sanitized = re.sub(r'\s?\(\d{4} remaster(ed)?\)', '', sanitized, flags=re.IGNORECASE)
+    sanitized = re.sub(r'\s?-\s?remaster(ed)?\s?\d{4}', '', sanitized, flags=re.IGNORECASE)
+    sanitized = re.sub(r'\s?/\s?remaster(ed)?\s?\d{4}', '', sanitized, flags=re.IGNORECASE)
+    sanitized = re.sub(r'\s?\(remaster(ed)?\s?\d{4}\)', '', sanitized, flags=re.IGNORECASE)
+    sanitized = re.sub(r'\s?-\s?remaster(ed)?', '', sanitized, flags=re.IGNORECASE)
+    sanitized = re.sub(r'\s?-\s?\d{4} version', '', sanitized, flags=re.IGNORECASE)
+    sanitized = re.sub(r'\s?-\s?version \d{4}', '', sanitized, flags=re.IGNORECASE)
+    sanitized = sanitized.strip()
+    return sanitized
 
 
 # =============================================================================
@@ -547,7 +562,8 @@ def fetch_no_api_data_from_list(urls, progress_bar=None):
             
             year, year_source = get_year_and_source(artist, title, -1000)
             song = {}
-            song['name'] = title
+            song['name'] = sanitize_name(title)
+            song['original_name'] = title
             song['original_year'] = 0
             song['year'] = year
             song['year_source'] = year_source
