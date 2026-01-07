@@ -25,7 +25,7 @@ def get_year_from_musicbrainz(title, artist) -> int | None:
     params = {"query": q, "fmt": "json", "limit": 5}
     headers = {"User-Agent": "hitster-card-fix/1.0 (you@example.com)"}
     try:
-        r = requests.get(MB_WS, params=params, headers=headers, timeout=10)
+        r = requests.get("https://musicbrainz.org/ws/2/recording", params=params, headers=headers, timeout=10)
         r.raise_for_status()
         result_json = r.json()
         years = []
