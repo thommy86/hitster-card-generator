@@ -1,3 +1,5 @@
+#!/usr/bin/env python3
+
 """
 Hitster Card Generator
 Generate custom Hitster-style music game cards from Spotify playlists.
@@ -9,6 +11,8 @@ import json
 import random
 import textwrap
 import re
+import argparse
+from dotenv import load_dotenv
 import qrcode
 import requests
 import numpy as np
@@ -52,7 +56,7 @@ COLOR_GRADIENT = [
 
 # Card design parameters
 CARD_SIZE = 2000  # pixels
-NEON_COLORS = [(255, 0, 100), (0, 200, 255), (255, 255, 0), (0, 255, 120)]
+NEON_COLORS = [(255, 0, 100), (0, 200, 255), (0, 255, 120), (255, 255, 0)]
 
 db = {"fonts_dict": FONT_PATHS, 
       "color_gradient": COLOR_GRADIENT,
@@ -64,55 +68,51 @@ utils.db = db
 # FINAL INTEGRATED PIPELINE
 # =============================================================================
 
-def generate_hitster_cards(db, playlist_url=None, client_id=None, client_secret=None, output_dir="hitster_cards"):
+def generate_hitster_cards(db, playlist_url=None, client_id=None, client_secret=None, output_dir="hitster_cards", fetch=False, card_label=None):
     print("=== Hitster Card Generator ===\n")
     full_output_path = os.path.join(OUTPUT_DIR, output_dir)
     os.makedirs(full_output_path, exist_ok=True)
     json_file = os.path.join(OUTPUT_DIR, output_dir, "songs.json")
+    
+    songs = []
 
     # --- DATA FETCHING LOGIC ---
-    if os.path.exists(json_file):
+    if not fetch and os.path.exists(json_file):
         print(f"Step 1: Loading local data from {json_file}...")
         with open(json_file, 'r', encoding='utf-8') as f:
-            data = json.load(f)
-            song_names = [d['name'] for d in data]
-            release_years = [d['year'] for d in data]
-            artists = [d['artist'] for d in data]
-            links = [d['link'] for d in data]
+            songs = json.load(f)
             
     elif os.path.exists(LINKS_FILE):
         print(f"Step 1: No JSON found. Using {LINKS_FILE} (Scraper Mode)...")
-        song_names, release_years, artists, links = utils.fetch_no_api_data(LINKS_FILE)
+        songs = utils.fetch_no_api_data(LINKS_FILE)
         
         with open(json_file, 'w', encoding='utf-8') as f:
-            data = [{'name': n, 'year': y, 'artist': a, 'link': l} 
-                    for n, y, a, l in zip(song_names, release_years, artists, links)]
-            json.dump(data, f, indent=2)
+            json.dump(songs, f, indent=2)
 
     elif client_id and client_secret and playlist_url:
         print("Step 1: Fetching from Spotify API...")
         playlist_data = utils.fetch_spotify_playlist(playlist_url, client_id, client_secret)
-        song_names, release_years, artists, links = utils.parse_playlist_data(playlist_data)
+        songs = utils.parse_playlist_data(playlist_data)
         
         with open(json_file, 'w', encoding='utf-8') as f:
-            data = [{'name': n, 'year': y, 'artist': a, 'link': l} 
-                    for n, y, a, l in zip(song_names, release_years, artists, links)]
-            json.dump(data, f, indent=2)
+            json.dump(songs, f, indent=2)
     else:
         print("ERROR: No API credentials AND no links.txt found.")
         return
+    
 
     # --- CARD GENERATION ---
-    print(f"\nStep 2: Generating {len(song_names)} cards...")
-    for i, (link, name, artist, year) in enumerate(zip(links, song_names, artists, release_years)):
+    print(f"\nStep 2: Generating {len(songs)} cards...")
+    release_years = [song['year'] for song in songs]
+    for i, song in enumerate(songs):
         qr_path = os.path.join(full_output_path, f"card_{i+1:03d}_qr.png")
         sol_path = os.path.join(full_output_path, f"card_{i+1:03d}_solution.png")
         
-        qr_code = utils.create_qr_code(link)
+        qr_code = utils.create_qr_code(song['link'])
         utils.create_qr_with_neon_rings(qr_code, qr_path)
-        utils.create_solution_side(name, artist, year, release_years, sol_path)
+        utils.create_solution_side(song['name'], song['artist'], song['year'], release_years, sol_path, card_label=card_label)
         if (i + 1) % 20 == 0:
-            print(f"  Progress: {i+1}/{len(song_names)}...")
+            print(f"  Progress: {i+1}/{len(songs)}...")
 
     # --- PDF CREATION ---
     print("\nStep 3: Creating PDF...")
@@ -121,9 +121,45 @@ def generate_hitster_cards(db, playlist_url=None, client_id=None, client_secret=
     print(f"\n✓ Done! PDF ready at: {pdf_path}")
 
 if __name__ == "__main__":
+
     # If API is down, you can leave these blank and just have 'links.txt' ready
-    PLAYLIST_URL = "" 
-    CLIENT_ID = ""
-    CLIENT_SECRET = ""
-    
-    generate_hitster_cards(db, PLAYLIST_URL, CLIENT_ID, CLIENT_SECRET)
+    load_dotenv()  # take environment variables from .env file
+
+    parser = argparse.ArgumentParser(description='Hitster Card Generator')
+    parser.add_argument('--fetch', action='store_true', help='Force re-fetching data and remove existing songs.json')
+    parser.add_argument('--ink-save-mode', action='store_true', default=None, help='if set, print the qr cards in ink saving mode (white background, black qr code)')
+    parser.add_argument('--card-draw-border', action='store_true', default=None, help='if set, draw border around the qr cards for easier cutting')
+    parser.add_argument('--card-label', default=None, help='Add a small label to each card (e.g., event name or playlist identifier)')
+    args = parser.parse_args()
+
+    PLAYLIST_URL = os.getenv("PLAYLIST_URL", "")
+    CLIENT_ID = os.getenv("CLIENT_ID", "")
+    CLIENT_SECRET = os.getenv("CLIENT_SECRET", "")
+
+    # Read default values from environment variables
+    INK_SAVING_MODE = os.getenv("INK_SAVING_MODE", "False").lower() == "true"
+    CARD_DRAW_BORDER = os.getenv("CARD_DRAW_BORDER", "False").lower() == "true"
+    CARD_LABEL = os.getenv("CARD_LABEL", None)
+
+    ink_save_mode = args.ink_save_mode if args.ink_save_mode is not None else INK_SAVING_MODE
+    card_draw_border = args.card_draw_border if args.card_draw_border is not None else CARD_DRAW_BORDER
+    card_label = args.card_label if args.card_label is not None else CARD_LABEL
+
+    # Set values in db, allowing command-line overrides
+    db['ink_saving_mode'] = ink_save_mode
+    db['card_draw_border'] = card_draw_border
+    db['card_background_color'] = 'white' if ink_save_mode else 'black'
+    db['card_border_color'] = 'black' if ink_save_mode else 'white'
+    db['card_label'] = card_label
+
+    print(f"Using client id {CLIENT_ID} to fetch playlist url {PLAYLIST_URL}...")
+    print(f"Ink saving mode: {db['ink_saving_mode']}, Draw border: {db['card_draw_border']}, Label: {db['card_label']}\n")
+
+    if args.fetch:
+        # Remove existing songs.json if it exists
+        json_file = os.path.join(OUTPUT_DIR, "hitster_cards", "songs.json")
+        if os.path.exists(json_file):
+            os.remove(json_file)
+            print(f"Removed existing {json_file}")
+
+    generate_hitster_cards(db, PLAYLIST_URL, CLIENT_ID, CLIENT_SECRET, fetch=args.fetch, card_label=db['card_label'])

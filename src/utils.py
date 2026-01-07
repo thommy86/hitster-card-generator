@@ -7,6 +7,7 @@ import re
 import qrcode
 import requests
 import numpy as np
+import urllib.parse
 from bs4 import BeautifulSoup
 from PIL import Image, ImageOps, ImageDraw, ImageFont
 import matplotlib.colors as mcolors
@@ -17,21 +18,66 @@ from reportlab.lib.units import cm
 db = None
 
 # =============================================================================
+# Correction of year fetching functions to use MusicBrainz and iTunes APIs
+# =============================================================================
+def get_year_from_musicbrainz(title, artist) -> int | None:
+    q = f'recording:"{title}" AND artist:"{artist}"'
+    params = {"query": q, "fmt": "json", "limit": 5}
+    headers = {"User-Agent": "hitster-card-fix/1.0 (you@example.com)"}
+    try:
+        r = requests.get(MB_WS, params=params, headers=headers, timeout=10)
+        r.raise_for_status()
+        result_json = r.json()
+        years = []
+        if not result_json or "recordings" not in result_json:
+            return None
+        for rec in result_json.get("recordings", []):
+            # releases may be embedded
+            for rel in rec.get("releases", []) or []:
+                date = rel.get("date")
+                if date:
+                    years.append(int(date.split("-")[0]))
+        if not years:
+            return None
+        return min(years)
+    except Exception:
+        return None
+
+def get_year_from_itunes(title, artist) -> int | None:
+    q = urllib.parse.quote(f"{artist} {title}")
+    url = f"https://itunes.apple.com/search?term={q}&entity=song&limit=5"
+    try:
+        r = requests.get(url, timeout=8)
+        r.raise_for_status()
+        result_json = r.json()
+        if not result_json or "results" not in result_json:
+            return None
+        years = []
+        for res in result_json.get("results", []):
+            rd = res.get("releaseDate")
+            if rd:
+                years.append(int(rd.split("-")[0]))
+        if not years:
+            return None
+        return min(years)
+    except Exception:
+        return None
+    
+def get_year_and_source(title, artist, orig_year) -> tuple[int | None, str | None]:
+    """Get release year and source ('iTunes' or 'MusicBrainz') for a song."""
+    itunes_year = get_year_from_itunes(title, artist)
+    if itunes_year is not None:
+        return itunes_year, 'iTunes'
+    
+    musicbrainz_year = get_year_from_musicbrainz(title, artist)
+    if musicbrainz_year is not None:
+        return musicbrainz_year, 'MusicBrainz'
+    
+    return orig_year, 'Spotify'
+
+# =============================================================================
 # NO-API SCRAPER FUNCTIONS (FALLBACK)
 # =============================================================================
-
-def get_year_from_itunes(artist, title):
-    """Pings iTunes API to find the release year."""
-    query = f"{artist} {title}".replace(" ", "+")
-    itunes_url = f"https://itunes.apple.com/search?term={query}&entity=song&limit=1"
-    try:
-        res = requests.get(itunes_url, timeout=5)
-        results = res.json().get('results', [])
-        if results:
-            return results[0]['releaseDate'].split('-')[0]
-    except:
-        pass
-    return "0000"
 
 def fetch_no_api_data(links_file):
     """Scrapes metadata from public Spotify pages based on links.txt."""
@@ -42,34 +88,7 @@ def fetch_no_api_data(links_file):
     with open(links_file, 'r') as f:
         urls = [line.strip() for line in f.readlines() if 'spotify.com/track/' in line]
 
-    songs, years, artists, links = [], [], [], []
-    
-    for i, url in enumerate(urls, 1):
-        print(f"  [{i}/{len(urls)}] Scraping: {url}")
-        headers = {'User-Agent': 'Mozilla/5.0'}
-        try:
-            res = requests.get(url, headers=headers, timeout=5)
-            soup = BeautifulSoup(res.text, 'html.parser')
-            
-            # Metadata from OpenGraph tags
-            title = soup.find("meta", property="og:title")['content']
-            desc = soup.find("meta", property="og:description")['content']
-            artist = desc.split(" · ")[0]
-            
-            year_str = get_year_from_itunes(artist, title)
-            year = int(year_str) if year_str != "0000" else -1000
-            
-            songs.append(title)
-            artists.append(artist)
-            years.append(year)
-            links.append(url)
-            
-            print(f"{year} | {artist} - {title}")
-            time.sleep(0.5)
-        except Exception as e:
-            print(f"Error: {e}")
-            
-    return songs, years, artists, links
+    return fetch_no_api_data_from_list(urls)
 
 # =============================================================================
 # SPOTIFY API FUNCTIONS
@@ -129,19 +148,50 @@ def parse_playlist_data(playlist_data):
     Extract song information from playlist data.
     
     Returns:
-        tuple: (song_names, release_years, artists, links)
+        array of songs ('name', 'year', 'artist', 'link')
     """
     tracks = playlist_data['tracks']['items']
-    
-    song_names = [item['track']['name'] for item in tracks]
-    release_dates = [item['track']['album']['release_date'] for item in tracks]
-    artists = [item['track']['artists'][0]['name'] for item in tracks]
-    links = [item['track']['external_urls']['spotify'] for item in tracks]
-    
-    # Extract only year from release date
-    release_years = [int(date.split("-")[0]) for date in release_dates]
-    
-    return song_names, release_years, artists, links
+
+    songs = []
+
+    for item in tracks:
+        track = item['track']
+
+        name = track['name']
+        artist = track['artists'][0]['name']
+        release_date = track['album']['release_date']
+        spotify_year = int(release_date.split("-")[0])
+        year = spotify_year # default
+        
+        # Try to get more accurate year from MusicBrainz or iTunes   
+        year, year_source = get_year_and_source(name, artist, spotify_year)     
+
+        song = {}
+        song['name'] = sanitize_name(name)
+        song['original_name'] = name
+        song['original_year'] = spotify_year
+        song['year'] = year
+        song['year_source'] = year_source
+        song['artist'] = artist
+        song['link'] = track['external_urls']['spotify']
+        song['album'] = track['album']['name']
+        songs.append(song)
+        
+    return songs
+
+def sanitize_name(name):
+    """Remove remastered info from title: """
+    sanitized = re.sub(r'\s?-\s?\d{4} remaster(ed)?', '', name, flags=re.IGNORECASE)
+    sanitized = re.sub(r'\s?/\s?\d{4} remaster(ed)?', '', sanitized, flags=re.IGNORECASE)
+    sanitized = re.sub(r'\s?\(\d{4} remaster(ed)?\)', '', sanitized, flags=re.IGNORECASE)
+    sanitized = re.sub(r'\s?-\s?remaster(ed)?\s?\d{4}', '', sanitized, flags=re.IGNORECASE)
+    sanitized = re.sub(r'\s?/\s?remaster(ed)?\s?\d{4}', '', sanitized, flags=re.IGNORECASE)
+    sanitized = re.sub(r'\s?\(remaster(ed)?\s?\d{4}\)', '', sanitized, flags=re.IGNORECASE)
+    sanitized = re.sub(r'\s?-\s?remaster(ed)?', '', sanitized, flags=re.IGNORECASE)
+    sanitized = re.sub(r'\s?-\s?\d{4} version', '', sanitized, flags=re.IGNORECASE)
+    sanitized = re.sub(r'\s?-\s?version \d{4}', '', sanitized, flags=re.IGNORECASE)
+    sanitized = sanitized.strip()
+    return sanitized
 
 
 # =============================================================================
@@ -161,45 +211,7 @@ def create_qr_with_neon_rings(qr_code, output_path):
     """
     Create QR code card with colorful neon rings background.
     """
-    size = db['card_size']
-    img = Image.new("RGB", (size, size), "black")
-    draw = ImageDraw.Draw(img)
-    
-    # Draw neon rings
-    center = size // 2
-    max_radius = size // 2 - 50
-    
-    random.seed(42)  # Reproducible pattern
-    for i, color in enumerate(db['neon_colors'] * 2):
-        radius = max_radius - i * 50
-        if radius <= 0:
-            break
-        
-        # Draw arc with random gaps
-        num_gaps = random.randint(1, 3)
-        for gap in range(num_gaps):
-            gap_start = random.randint(0, 360)
-            gap_length = random.randint(20, 60)
-            
-            draw.arc(
-                (center - radius, center - radius, center + radius, center + radius),
-                start=0, end=360, fill=color, width=12
-            )
-            draw.arc(
-                (center - radius, center - radius, center + radius, center + radius),
-                start=gap_start, end=gap_start + gap_length, fill="black", width=12
-            )
-    
-    # Overlay QR code
-    qr_size = int(size * 0.45)
-    qr_code_rgb = qr_code.convert('RGB')
-    qr_code_resized = qr_code_rgb.resize((qr_size, qr_size), Image.Resampling.LANCZOS)
-    
-    # Create transparency mask (white = opaque, black = transparent)
-    qr_array = qr_code_resized.convert('L')
-    mask = qr_array.point(lambda x: 255 if x > 128 else 0, mode='1')
-    
-    img.paste(qr_code_resized, (center - qr_size // 2, center - qr_size // 2), mask)
+    img = create_qr_with_neon_rings_in_memory(qr_code)
     img.save(output_path)
     return output_path
 
@@ -243,7 +255,8 @@ def load_fonts():
         font_year = ImageFont.truetype(db['fonts_dict']['year'], 380)
         font_artist = ImageFont.truetype(db['fonts_dict']['artist'], 110)
         font_song = ImageFont.truetype(db['fonts_dict']['song'], 100)
-        return font_year, font_artist, font_song
+        font_label = ImageFont.truetype(db['fonts_dict']['artist'], 50)
+        return font_year, font_artist, font_song, font_label
     except:
         pass
     
@@ -268,7 +281,8 @@ def load_fonts():
             font_year = ImageFont.truetype(bold_path, 300)
             font_artist = ImageFont.truetype(regular_path, 140)
             font_song = ImageFont.truetype(italic_path, 140)
-            return font_year, font_artist, font_song
+            font_label = ImageFont.truetype(regular_path, 50)
+            return font_year, font_artist, font_song, font_label
         except:
             continue
     
@@ -277,69 +291,13 @@ def load_fonts():
     return ImageFont.load_default(), ImageFont.load_default(), ImageFont.load_default()
 
 
-def create_solution_side(song_name, artist, year, all_years, output_path):
+def create_solution_side(song_name, artist, year, all_years, output_path, card_label=None):
     """
     Create solution card with year-based color background.
     """
-    size = db['card_size']
-    margin = 150
-    max_width = size - (2 * margin)
-    
-    # Get color for this year
-    color_rgb = get_year_color(year, all_years)
-    color_int = tuple(int(c * 255) for c in color_rgb)
-    
-    img = Image.new("RGB", (size, size), color_int)
-    draw = ImageDraw.Draw(img)
-    
-    font_year, font_artist, font_song = load_fonts()
-    
-    def get_fitted_text(text, font, max_width):
-        """Wrap text to fit within max_width."""
-        bbox = draw.textbbox((0, 0), text, font=font)
-        text_width = bbox[2] - bbox[0]
-        
-        if text_width <= max_width:
-            return text
-        
-        avg_char_width = text_width / len(text)
-        chars_per_line = int(max_width / avg_char_width * 0.85)
-        wrapped = '\n'.join(textwrap.wrap(text, width=max(chars_per_line, 10)))
-        
-        return wrapped
-    
-    # Prepare text
-    song_text = get_fitted_text(song_name, font_song, max_width)
-    artist_text = get_fitted_text(artist, font_artist, max_width)
-    year_text = str(year)
-    
-    # Draw centered text
-    gap = 400
-    center_x = size / 2
-    center_y = size / 2
-    
-    draw.text((center_x, center_y), year_text, fill="black", 
-             font=font_year, anchor="mm")
-    
-    artist_y = center_y - gap
-    if '\n' in artist_text:
-        draw.multiline_text((center_x, artist_y), artist_text, fill="black",
-                          font=font_artist, align="center", anchor="mm")
-    else:
-        draw.text((center_x, artist_y), artist_text, fill="black",
-                 font=font_artist, anchor="mm")
-    
-    song_y = center_y + gap
-    if '\n' in song_text:
-        draw.multiline_text((center_x, song_y), song_text, fill="black",
-                          font=font_song, align="center", anchor="mm")
-    else:
-        draw.text((center_x, song_y), song_text, fill="black",
-                 font=font_song, anchor="mm")
-    
+    img = create_solution_side_in_memory(song_name, artist, year, all_years, card_label=card_label)    
     img.save(output_path)
     return output_path
-
 
 # =============================================================================
 # PDF GENERATION
@@ -379,8 +337,11 @@ def create_cards_pdf(cards_folder, output_pdf_path):
         start_card = page_idx * cards_per_page
         end_card = min(start_card + cards_per_page, len(qr_images))
         
-        # FRONT PAGE (QR codes) - black background
-        c.setFillColorRGB(0, 0, 0)
+        # FRONT PAGE (QR codes)
+        if db['ink_saving_mode']: # FIXME: should be always white?
+            c.setFillColorRGB(1, 1, 1) # white
+        else:
+            c.setFillColorRGB(0, 0, 0) # black
         c.rect(0, 0, width, height, stroke=0, fill=1)
         
         for card_idx in range(start_card, end_card):
@@ -433,7 +394,21 @@ def create_qr_with_neon_rings_in_memory(qr_code):
     Create QR code card with colorful neon rings background.
     """
     size = db['card_size']
-    img = Image.new("RGB", (size, size), "black")
+    background_color = db['card_background_color']
+    border_color = db['card_border_color']
+    draw_border = db['card_draw_border']
+    img = Image.new("RGB", (size, size), background_color)
+    # draw border around the card for easier cutting
+    if draw_border:
+        border_draw = ImageDraw.Draw(img)
+        border_width = 20
+        border_color = border_color
+        border_draw.rectangle(
+            [(border_width, border_width), (size - border_width, size - border_width)],
+            outline=border_color,
+            width=border_width
+        )
+
     draw = ImageDraw.Draw(img)
     
     # Draw neon rings
@@ -458,7 +433,7 @@ def create_qr_with_neon_rings_in_memory(qr_code):
             )
             draw.arc(
                 (center - radius, center - radius, center + radius, center + radius),
-                start=gap_start, end=gap_start + gap_length, fill="black", width=12
+                start=gap_start, end=gap_start + gap_length, fill=background_color, width=12
             )
     
     # Overlay QR code
@@ -466,15 +441,37 @@ def create_qr_with_neon_rings_in_memory(qr_code):
     qr_code_rgb = qr_code.convert('RGB')
     qr_code_resized = qr_code_rgb.resize((qr_size, qr_size), Image.Resampling.LANCZOS)
     
-    # Create transparency mask (white = opaque, black = transparent)
-    qr_array = qr_code_resized.convert('L')
-    mask = qr_array.point(lambda x: 255 if x > 128 else 0, mode='1')
+    # Create a robust module mask (True where QR modules are present),
+    # independent of whether modules are light or dark in the supplied image.
+    qr_l = qr_code_resized.convert('L')
+    arr = np.array(qr_l)
+    # dark_mask = True where pixels are dark (<128)
+    dark_mask = arr < 128
+    num_dark = dark_mask.sum()
+    total = arr.size
+    # Modules usually occupy the minority of pixels; assume the smaller group corresponds to modules.
+    if num_dark < total / 2:
+        modules_mask = dark_mask
+    else:
+        modules_mask = ~dark_mask
+
+    # Convert boolean mask to a PIL mask (255 = opaque)
+    mask_img = Image.fromarray((modules_mask.astype('uint8') * 255)).convert('1')
     
-    img.paste(qr_code_resized, (center - qr_size // 2, center - qr_size // 2), mask)
+    # Choose module color that contrasts with the background area where the QR will be placed.
+    left = center - qr_size // 2
+    top = center - qr_size // 2
+    bg_crop = img.crop((left, top, left + qr_size, top + qr_size)).convert('L')
+    bg_mean = np.array(bg_crop).mean()
+    module_color = (0, 0, 0) if bg_mean > 127 else (255, 255, 255)
+    
+    # Create a solid overlay for modules and paste it using the mask so only module pixels are drawn.
+    overlay = Image.new('RGB', (qr_size, qr_size), module_color)
+    img.paste(overlay, (left, top), mask_img)
     
     return img
 
-def create_solution_side_in_memory(song_name, artist, year, all_years):
+def create_solution_side_in_memory(song_name, artist, year, all_years, card_label=None):
     """
     Create solution card and return the PIL Image object directly.
     """
@@ -487,10 +484,18 @@ def create_solution_side_in_memory(song_name, artist, year, all_years):
     color_int = tuple(int(c * 255) for c in color_rgb)
     
     # Create the base image
-    img = Image.new("RGB", (size, size), color_int)
+    ink_saving_mode = db['ink_saving_mode']
+    background_color = db['card_background_color'] if ink_saving_mode else color_int
+    border_width = 100
+
+    img = Image.new("RGB", (size, size), background_color)
+    if ink_saving_mode:
+        # draw border in the correct color only in ink saving mode
+        draw = ImageDraw.Draw(img)
+        draw.rectangle([(0, 0), (size - 1, size - 1)], outline=color_int, width=border_width)
     draw = ImageDraw.Draw(img)
     
-    font_year, font_artist, font_song = load_fonts()
+    font_year, font_artist, font_song, font_label = load_fonts()
     
     def get_fitted_text_in_memory(text, font, max_width):
         """Wrap text to fit within max_width."""
@@ -534,6 +539,12 @@ def create_solution_side_in_memory(song_name, artist, year, all_years):
     else:
         draw.text((center_x, song_y), song_text, fill="black",
                  font=font_song, anchor="mm")
+        
+    if card_label:
+        # draw optional label in the bottom right corner centered in the border (if any)
+        label_y = size - border_width // 2
+        label_x = size - border_width // 2
+        draw.text((label_x, label_y), card_label, fill="black", font=font_label, anchor="rm")
     
     # IMPORTANT: Return the PIL Image object instead of saving to a file
     return img
@@ -543,41 +554,48 @@ def fetch_no_api_data_from_list(urls, progress_bar=None):
     """
     Scrapes metadata from public Spotify pages based on a provided list of URLs.
     """
-    songs, years, artists, valid_links = [], [], [], []
+
+    songs = []
     total = len(urls)
     
-    for i, url in enumerate(urls):
+    for i, url in enumerate(urls, 1):
+        print(f"  [{i}/{len(urls)}] Scraping: {url}")
+        headers = {'User-Agent': 'Mozilla/5.0'}
         try:
-            headers = {'User-Agent': 'Mozilla/5.0'}
             res = requests.get(url, headers=headers, timeout=5)
             soup = BeautifulSoup(res.text, 'html.parser')
             
-            # Extract metadata from OpenGraph tags
+            # Metadata from OpenGraph tags
             title = soup.find("meta", property="og:title")['content']
             desc = soup.find("meta", property="og:description")['content']
             artist = desc.split(" · ")[0]
             
-            # Get year from iTunes helper (make sure this function is in utils.py too)
-            year_str = get_year_from_itunes(artist, title)
-            year = int(year_str) if year_str != "0000" else -1
+            year, year_source = get_year_and_source(artist, title, -1000)
+            song = {}
+            song['name'] = sanitize_name(title)
+            song['original_name'] = title
+            song['original_year'] = 0
+            song['year'] = year
+            song['year_source'] = year_source
+            song['artist'] = artist
+            song['link'] = url
             
-            songs.append(title)
-            artists.append(artist)
-            years.append(year)
-            valid_links.append(url)
+            songs.append(song)
+            
+            print(f"{year} | {artist} - {title}")
+            time.sleep(0.5)
             # Update Progress
             if progress_bar:
                 percent = (i + 1) / total
                 progress_bar.progress(percent, text=f"Scraped {i+1}/{total}: {title[:30]}...")
-        except:
-            continue
-            
-    return songs, years, artists, valid_links
-            
 
+        except Exception as e:
+            print(f"Error: {e}")
+            
+    return songs
 
-def create_pdf_in_memory(song_names, years, artists, links, progress_bar=None):
-    if not song_names:
+def create_pdf_in_memory(songs, progress_bar=None):
+    if not songs:
         return None
 
     buffer = io.BytesIO()
@@ -590,23 +608,25 @@ def create_pdf_in_memory(song_names, years, artists, links, progress_bar=None):
     margin_x = (width - (cols * card_size)) / 2
     margin_y = (height - (rows * card_size)) / 2
 
-    total_cards = len(song_names)
+    total_cards = len(songs)
+    years = [song['year'] for song in songs]
+
+    card_label = db.get('label', None)
 
     for i in range(0, total_cards, 20):
         # Slice the data for this specific page
-        batch_links = links[i:i+20]
-        batch_info = list(zip(song_names[i:i+20], artists[i:i+20], years[i:i+20]))
+        batch_songs = list(songs[i:i+20])
 
         # --- PAGE 1: FRONT (QR CODES) ---
         # --- Inside create_pdf_in_memory ---
-        for idx, link in enumerate(batch_links):
+        for idx, song in enumerate(batch_songs):
             col = idx % cols
             row = (idx // cols) 
             x = margin_x + col * card_size
             y = height - margin_y - (row + 1) * card_size
             
             # STEP 1: Turn the URL string into a QR Image object
-            base_qr = create_qr_code(link) 
+            base_qr = create_qr_code(song['link']) 
             
             # STEP 2: Pass that IMAGE object to the neon rings function
             qr_pil = create_qr_with_neon_rings_in_memory(base_qr) 
@@ -620,7 +640,7 @@ def create_pdf_in_memory(song_names, years, artists, links, progress_bar=None):
         c.showPage() # Finish the Front page
 
         # --- PAGE 2: BACK (SOLUTIONS - MIRRORED) ---
-        for idx, (name, artist, year) in enumerate(batch_info):
+        for idx, song in enumerate(batch_songs):
             orig_col = idx % cols
             mirrored_col = (cols - 1) - orig_col # Flip horizontally for duplex
             row = (idx // cols)
@@ -630,7 +650,7 @@ def create_pdf_in_memory(song_names, years, artists, links, progress_bar=None):
             
             # 1. Generate Solution Image
             # IMPORTANT: Ensure your create_solution_side returns a PIL Image!
-            sol_pil = create_solution_side_in_memory(name, artist, year, years) 
+            sol_pil = create_solution_side_in_memory(song['name'], song['artist'], song['year'], years, card_label=card_label) 
             sol_byte_arr = io.BytesIO()
             sol_pil.save(sol_byte_arr, format='PNG')
             sol_byte_arr.seek(0)
