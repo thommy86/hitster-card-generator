@@ -556,6 +556,7 @@ def fetch_no_api_data_from_list(urls, progress_bar=None):
     """
 
     songs = []
+    total = len(urls)
     
     for i, url in enumerate(urls, 1):
         print(f"  [{i}/{len(urls)}] Scraping: {url}")
