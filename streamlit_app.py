@@ -1,7 +1,6 @@
 import streamlit as st
 import os
-import io
-from src import utils  # Import your refactored logic
+from src import utils
 
 # --- CONFIGURATION & SESSION STATE ---
 PROJECT_ROOT = os.path.dirname(os.path.abspath(__file__))
@@ -40,7 +39,29 @@ st.set_page_config(page_title="Hitster Generator", page_icon="🎵", layout="wid
 
 
 with st.sidebar:
+     # --- NEW SETTINGS SECTION ---
+    st.header("⚙️ Settings")
+    
+    # helper text
+    st.caption("Customize your print layout")
+    
+    # 1. Ink Saving Mode Toggle
+    ink_mode = st.toggle("Ink Saving Mode 🖨️", value=False, 
+                        help="Use white background and black text to save ink.")
+    
+    # 2. Border Toggle
+    border_mode = st.toggle("Draw Cutting Borders ✂️", value=False,
+                           help="Draw a line around each card for easier cutting.")
+
+    # 3. Update the global configuration based on UI selection
+    db["ink_saving_mode"] = ink_mode
+    db["card_draw_border"] = border_mode
+    # Update colors dynamically based on ink mode
+    db["card_background_color"] = "white" if ink_mode else "black"
+    db["card_border_color"] = "black" if ink_mode else "white"
     st.divider()
+        # ---------------------------
+
     st.markdown("### ☕ Support the Project")
     st.write("If this tool made your game night special, feel free to support the developer!")
     
