@@ -184,6 +184,12 @@ Pull requests welcome! Feel free to:
 - Add command-line interface
 - Support other music platforms
 
+## 🤝 Contributors
+
+A huge thanks to the following people for helping make this project better:
+
+* **[cdaller](https://github.com/cdaller)** - Implemented Ink-Saving mode, improved QR code logic, and enhanced song year accuracy.
+
 ---
 
 
