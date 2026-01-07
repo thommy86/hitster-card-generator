@@ -255,7 +255,8 @@ def load_fonts():
         font_year = ImageFont.truetype(db['fonts_dict']['year'], 380)
         font_artist = ImageFont.truetype(db['fonts_dict']['artist'], 110)
         font_song = ImageFont.truetype(db['fonts_dict']['song'], 100)
-        return font_year, font_artist, font_song
+        font_label = ImageFont.truetype(db['fonts_dict']['artist'], 50)
+        return font_year, font_artist, font_song, font_label
     except:
         pass
     
@@ -280,7 +281,8 @@ def load_fonts():
             font_year = ImageFont.truetype(bold_path, 300)
             font_artist = ImageFont.truetype(regular_path, 140)
             font_song = ImageFont.truetype(italic_path, 140)
-            return font_year, font_artist, font_song
+            font_label = ImageFont.truetype(regular_path, 50)
+            return font_year, font_artist, font_song, font_label
         except:
             continue
     
@@ -289,11 +291,11 @@ def load_fonts():
     return ImageFont.load_default(), ImageFont.load_default(), ImageFont.load_default()
 
 
-def create_solution_side(song_name, artist, year, all_years, output_path):
+def create_solution_side(song_name, artist, year, all_years, output_path, card_label=None):
     """
     Create solution card with year-based color background.
     """
-    img = create_solution_side_in_memory(song_name, artist, year, all_years)    
+    img = create_solution_side_in_memory(song_name, artist, year, all_years, card_label=card_label)    
     img.save(output_path)
     return output_path
 
@@ -431,7 +433,7 @@ def create_qr_with_neon_rings_in_memory(qr_code):
             )
             draw.arc(
                 (center - radius, center - radius, center + radius, center + radius),
-                start=gap_start, end=gap_start + gap_length, fill="black", width=12
+                start=gap_start, end=gap_start + gap_length, fill=background_color, width=12
             )
     
     # Overlay QR code
@@ -469,7 +471,7 @@ def create_qr_with_neon_rings_in_memory(qr_code):
     
     return img
 
-def create_solution_side_in_memory(song_name, artist, year, all_years):
+def create_solution_side_in_memory(song_name, artist, year, all_years, card_label=None):
     """
     Create solution card and return the PIL Image object directly.
     """
@@ -484,15 +486,16 @@ def create_solution_side_in_memory(song_name, artist, year, all_years):
     # Create the base image
     ink_saving_mode = db['ink_saving_mode']
     background_color = db['card_background_color'] if ink_saving_mode else color_int
+    border_width = 100
 
     img = Image.new("RGB", (size, size), background_color)
     if ink_saving_mode:
         # draw border in the correct color only in ink saving mode
         draw = ImageDraw.Draw(img)
-        draw.rectangle([(0, 0), (size - 1, size - 1)], outline=color_int, width=100)
+        draw.rectangle([(0, 0), (size - 1, size - 1)], outline=color_int, width=border_width)
     draw = ImageDraw.Draw(img)
     
-    font_year, font_artist, font_song = load_fonts()
+    font_year, font_artist, font_song, font_label = load_fonts()
     
     def get_fitted_text_in_memory(text, font, max_width):
         """Wrap text to fit within max_width."""
@@ -536,6 +539,12 @@ def create_solution_side_in_memory(song_name, artist, year, all_years):
     else:
         draw.text((center_x, song_y), song_text, fill="black",
                  font=font_song, anchor="mm")
+        
+    if card_label:
+        # draw optional label in the bottom right corner centered in the border (if any)
+        label_y = size - border_width // 2
+        label_x = size - border_width // 2
+        draw.text((label_x, label_y), card_label, fill="black", font=font_label, anchor="rm")
     
     # IMPORTANT: Return the PIL Image object instead of saving to a file
     return img
@@ -584,10 +593,6 @@ def fetch_no_api_data_from_list(urls, progress_bar=None):
             
     return songs
 
-
-            
-
-
 def create_pdf_in_memory(songs, progress_bar=None):
     if not songs:
         return None
@@ -604,6 +609,8 @@ def create_pdf_in_memory(songs, progress_bar=None):
 
     total_cards = len(songs)
     years = [song['year'] for song in songs]
+
+    card_label = db.get('label', None)
 
     for i in range(0, total_cards, 20):
         # Slice the data for this specific page
@@ -642,7 +649,7 @@ def create_pdf_in_memory(songs, progress_bar=None):
             
             # 1. Generate Solution Image
             # IMPORTANT: Ensure your create_solution_side returns a PIL Image!
-            sol_pil = create_solution_side_in_memory(song['name'], song['artist'], song['year'], years) 
+            sol_pil = create_solution_side_in_memory(song['name'], song['artist'], song['year'], years, card_label=card_label) 
             sol_byte_arr = io.BytesIO()
             sol_pil.save(sol_byte_arr, format='PNG')
             sol_byte_arr.seek(0)

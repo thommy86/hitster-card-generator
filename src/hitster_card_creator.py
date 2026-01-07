@@ -68,7 +68,7 @@ utils.db = db
 # FINAL INTEGRATED PIPELINE
 # =============================================================================
 
-def generate_hitster_cards(db, playlist_url=None, client_id=None, client_secret=None, output_dir="hitster_cards", fetch=False):
+def generate_hitster_cards(db, playlist_url=None, client_id=None, client_secret=None, output_dir="hitster_cards", fetch=False, card_label=None):
     print("=== Hitster Card Generator ===\n")
     full_output_path = os.path.join(OUTPUT_DIR, output_dir)
     os.makedirs(full_output_path, exist_ok=True)
@@ -110,7 +110,7 @@ def generate_hitster_cards(db, playlist_url=None, client_id=None, client_secret=
         
         qr_code = utils.create_qr_code(song['link'])
         utils.create_qr_with_neon_rings(qr_code, qr_path)
-        utils.create_solution_side(song['name'], song['artist'], song['year'], release_years, sol_path)
+        utils.create_solution_side(song['name'], song['artist'], song['year'], release_years, sol_path, card_label=card_label)
         if (i + 1) % 20 == 0:
             print(f"  Progress: {i+1}/{len(songs)}...")
 
@@ -127,22 +127,33 @@ if __name__ == "__main__":
 
     parser = argparse.ArgumentParser(description='Hitster Card Generator')
     parser.add_argument('--fetch', action='store_true', help='Force re-fetching data and remove existing songs.json')
+    parser.add_argument('--ink-save-mode', action='store_true', default=None, help='if set, print the qr cards in ink saving mode (white background, black qr code)')
+    parser.add_argument('--card-draw-border', action='store_true', default=None, help='if set, draw border around the qr cards for easier cutting')
+    parser.add_argument('--card-label', default=None, help='Add a small label to each card (e.g., event name or playlist identifier)')
     args = parser.parse_args()
 
     PLAYLIST_URL = os.getenv("PLAYLIST_URL", "")
     CLIENT_ID = os.getenv("CLIENT_ID", "")
     CLIENT_SECRET = os.getenv("CLIENT_SECRET", "")
 
-    # Default values are the original settings:
+    # Read default values from environment variables
     INK_SAVING_MODE = os.getenv("INK_SAVING_MODE", "False").lower() == "true"
     CARD_DRAW_BORDER = os.getenv("CARD_DRAW_BORDER", "False").lower() == "true"
+    CARD_LABEL = os.getenv("CARD_LABEL", None)
 
-    db['ink_saving_mode'] = INK_SAVING_MODE
-    db['card_draw_border'] = CARD_DRAW_BORDER
-    db['card_background_color'] = 'white' if INK_SAVING_MODE else 'black'
-    db['card_border_color'] = 'black' if INK_SAVING_MODE else 'white'
+    ink_save_mode = args.ink_save_mode if args.ink_save_mode is not None else INK_SAVING_MODE
+    card_draw_border = args.card_draw_border if args.card_draw_border is not None else CARD_DRAW_BORDER
+    card_label = args.card_label if args.card_label is not None else CARD_LABEL
+
+    # Set values in db, allowing command-line overrides
+    db['ink_saving_mode'] = ink_save_mode
+    db['card_draw_border'] = card_draw_border
+    db['card_background_color'] = 'white' if ink_save_mode else 'black'
+    db['card_border_color'] = 'black' if ink_save_mode else 'white'
+    db['card_label'] = card_label
 
     print(f"Using client id {CLIENT_ID} to fetch playlist url {PLAYLIST_URL}...")
+    print(f"Ink saving mode: {db['ink_saving_mode']}, Draw border: {db['card_draw_border']}, Label: {db['card_label']}\n")
 
     if args.fetch:
         # Remove existing songs.json if it exists
@@ -151,4 +162,4 @@ if __name__ == "__main__":
             os.remove(json_file)
             print(f"Removed existing {json_file}")
 
-    generate_hitster_cards(db, PLAYLIST_URL, CLIENT_ID, CLIENT_SECRET, fetch=args.fetch)
+    generate_hitster_cards(db, PLAYLIST_URL, CLIENT_ID, CLIENT_SECRET, fetch=args.fetch, card_label=db['card_label'])
