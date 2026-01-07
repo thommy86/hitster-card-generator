@@ -46,11 +46,11 @@ with st.sidebar:
     st.caption("Customize your print layout")
     
     # 1. Ink Saving Mode Toggle
-    ink_mode = st.toggle("Ink Saving Mode 🖨️", value=False, 
+    ink_mode = st.toggle("Ink Saving Mode", value=False, 
                         help="Use white background and black text to save ink.")
     
     # 2. Border Toggle
-    border_mode = st.toggle("Draw Cutting Borders ✂️", value=False,
+    border_mode = st.toggle("Draw Cutting Borders", value=False,
                            help="Draw a line around each card for easier cutting.")
 
     # 3. Update the global configuration based on UI selection
