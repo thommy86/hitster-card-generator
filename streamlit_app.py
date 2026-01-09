@@ -70,7 +70,6 @@ with st.sidebar:
         label="Open GitHub Issues", 
         url="https://github.com/WhiteShunpo/hitster-cards-generator/issues",
         type="secondary", # "primary" for red/filled, "secondary" for outline
-        icon="🐛" # Optional icon
     )
 
     st.divider()
