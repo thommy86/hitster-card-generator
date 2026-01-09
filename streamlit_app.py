@@ -37,7 +37,6 @@ utils.db = db
 # --- UI INTERFACE ---
 st.set_page_config(page_title="Hitster Generator", page_icon="🎵", layout="wide")
 
-
 with st.sidebar:
      # --- NEW SETTINGS SECTION ---
     st.header("⚙️ Settings")
@@ -59,9 +58,24 @@ with st.sidebar:
     # Update colors dynamically based on ink mode
     db["card_background_color"] = "white" if ink_mode else "black"
     db["card_border_color"] = "black" if ink_mode else "white"
+    
     st.divider()
-        # ---------------------------
 
+    # --- FEEDBACK SECTION ---
+    st.header("Feedback")
+    st.write("Found a bug or have a feature idea? Let me know on GitHub!")
+    
+    # This button opens your GitHub Issues page in a new tab
+    st.link_button(
+        label="Open GitHub Issues", 
+        url="https://github.com/WhiteShunpo/hitster-cards-generator/issues",
+        type="secondary", # "primary" for red/filled, "secondary" for outline
+        icon="🐛" # Optional icon
+    )
+
+    st.divider()
+
+    # --- SUPPORT SECTION ---
     st.markdown("### ☕ Support the Project")
     st.write("If this tool made your game night special, feel free to support the developer!")
     
@@ -75,6 +89,7 @@ with st.sidebar:
     """
     st.markdown(button_html, unsafe_allow_html=True)
 
+
 st.divider()
 
 with st.expander("Disclaimer, Accuracy & Support"):
@@ -85,13 +100,6 @@ with st.expander("Disclaimer, Accuracy & Support"):
     **📱 Mobile User Note:**
     If the download button doesn't respond on your phone, please try a desktop browser. Mobile browsers sometimes struggle with large in-memory PDF streams.
     """)
-    
-    # Bug Report and Feedback Links
-    col_bug, col_feature = st.columns(2)
-    with col_bug:
-        st.markdown("[Report a Bug](https://github.com/WhiteShunpo/hitster-cards-generator/issues/new?template=bug_report.md)")
-    with col_feature:
-        st.markdown("[Suggest a Feature](https://github.com/WhiteShunpo/hitster-cards-generator/issues/new)")
 
 # --- MAIN PAGE ---
 # Hero Section
