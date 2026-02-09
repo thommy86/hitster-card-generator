@@ -42,3 +42,6 @@ test_*.png
 # OS
 .DS_Store
 Thumbs.db
+
+# Large files
+*.pdf
