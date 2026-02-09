@@ -26,7 +26,7 @@ _font_cache = None
 # =============================================================================
 # YEAR VALIDATION
 # =============================================================================
-MIN_VALID_YEAR = 1900
+MIN_VALID_YEAR = 1500
 MAX_VALID_YEAR = datetime.now().year + 1
 
 def _validate_year(year: int | None) -> int | None:
