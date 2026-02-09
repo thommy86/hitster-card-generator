@@ -5,24 +5,10 @@ Hitster Card Generator
 Generate custom Hitster-style music game cards from Spotify playlists.
 """
 
-import time
 import os
 import json
-import random
-import textwrap
-import re
 import argparse
 from dotenv import load_dotenv
-import qrcode
-import requests
-import numpy as np
-from bs4 import BeautifulSoup
-from PIL import Image, ImageOps, ImageDraw, ImageFont
-import matplotlib.colors as mcolors
-from reportlab.lib.pagesizes import A4
-from reportlab.pdfgen import canvas
-from reportlab.lib.utils import ImageReader
-from reportlab.lib.units import cm
 import utils
 
 # =============================================================================

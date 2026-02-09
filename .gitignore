@@ -28,16 +28,31 @@ all_cards.pdf
 output/*
 !output/.gitkeep
 
+# Generated card images (keep only the 2 example_pictures for README)
+examples/example_folder_with_cards/
+
+# Unused font weights (only Bold, SemiBold, MediumItalic are needed)
+fonts/Montserrat-Black*.ttf
+fonts/Montserrat-BoldItalic.ttf
+fonts/Montserrat-ExtraBold*.ttf
+fonts/Montserrat-ExtraLight*.ttf
+fonts/Montserrat-Italic.ttf
+fonts/Montserrat-Light*.ttf
+fonts/Montserrat-Medium.ttf
+fonts/Montserrat-Regular.ttf
+fonts/Montserrat-SemiBoldItalic.ttf
+fonts/Montserrat-Thin*.ttf
+
 # Temporary files
 test_*.png
 *.tmp
 *.ipynb
+
 # IDE
 .vscode/
 .idea/
 *.swp
 *.swo
-
 
 # OS
 .DS_Store
