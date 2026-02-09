@@ -122,8 +122,7 @@ def generate_hitster_cards(db, playlist_url=None, client_id=None, client_secret=
 
 if __name__ == "__main__":
 
-    # If API is down, you can leave these blank and just have 'links.txt' ready
-    load_dotenv()  # take environment variables from .env file
+    load_dotenv()
 
     parser = argparse.ArgumentParser(description='Hitster Card Generator')
     parser.add_argument('--fetch', action='store_true', help='Force re-fetching data and remove existing songs.json')
@@ -136,7 +135,6 @@ if __name__ == "__main__":
     CLIENT_ID = os.getenv("CLIENT_ID", "")
     CLIENT_SECRET = os.getenv("CLIENT_SECRET", "")
 
-    # Read default values from environment variables
     INK_SAVING_MODE = os.getenv("INK_SAVING_MODE", "False").lower() == "true"
     CARD_DRAW_BORDER = os.getenv("CARD_DRAW_BORDER", "False").lower() == "true"
     CARD_LABEL = os.getenv("CARD_LABEL", None)
@@ -145,7 +143,6 @@ if __name__ == "__main__":
     card_draw_border = args.card_draw_border if args.card_draw_border is not None else CARD_DRAW_BORDER
     card_label = args.card_label if args.card_label is not None else CARD_LABEL
 
-    # Set values in db, allowing command-line overrides
     db['ink_saving_mode'] = ink_save_mode
     db['card_draw_border'] = card_draw_border
     db['card_background_color'] = 'white' if ink_save_mode else 'black'
@@ -156,7 +153,6 @@ if __name__ == "__main__":
     print(f"Ink saving mode: {db['ink_saving_mode']}, Draw border: {db['card_draw_border']}, Label: {db['card_label']}\n")
 
     if args.fetch:
-        # Remove existing songs.json if it exists
         json_file = os.path.join(OUTPUT_DIR, "hitster_cards", "songs.json")
         if os.path.exists(json_file):
             os.remove(json_file)
