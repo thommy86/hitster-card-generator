@@ -7,4 +7,4 @@ qrcode
 reportlab
 requests
 python-dotenv
-streamlit
+streamlit>=1.45.0
