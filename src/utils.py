@@ -116,15 +116,38 @@ def get_year_and_source(title, artist, orig_year) -> tuple[int | None, str | Non
 # NAME SANITIZATION
 # =============================================================================
 def sanitize_name(name):
-    """Remove remastered/version info from title."""
-    sanitized = re.sub(
-        r'\s*[-/]\s*(?:\d{4}\s*)?remaster(?:ed)?(?:\s*\d{4})?'
-        r'|\s*\((?:\d{4}\s*)?remaster(?:ed)?(?:\s*\d{4})?\)'
-        r'|\s*[-/]\s*(?:\d{4}\s*)?version(?:\s*\d{4})?'
-        r'|\s*[-/]\s*version\s*\d{4}',
-        '', name, flags=re.IGNORECASE
+    """Remove common version/edition suffixes from song title.
+
+    Strips remaster, live, acoustic, radio edit, feat., extended mix, etc.
+    Both parenthetical forms (Live) / [Live] and dash forms - Live are handled.
+    """
+    # Keyword groups for inside parentheses/brackets — feat. may contain any char except the closing bracket
+    _PAREN = (
+        r'(?:\d{4}\s*)?remaster(?:ed)?(?:\s*\d{4})?'
+        r'|live(?:\s+[^\)\]]*)?'
+        r'|acoustic(?:\s+version)?'
+        r'|radio\s+edit'
+        r'|(?:original|extended|club|deluxe)\s+(?:mix|version|edit)'
+        r'|(?:single|album)\s+version'
+        r'|bonus\s+track'
+        r'|(?:mono|stereo)'
+        r'|(?:feat|ft|featuring)\.?\s+[^\)\]]+'
     )
-    return sanitized.strip()
+    # Keyword groups after a dash/slash — feat. and live may consume the rest of the title
+    _DASH = (
+        r'(?:\d{4}\s*)?remaster(?:ed)?(?:\s*\d{4})?'
+        r'|(?:\d{4}\s*)?version(?:\s*\d{4})?'
+        r'|live(?:\s+.+)?'
+        r'|acoustic(?:\s+version)?'
+        r'|radio\s+edit'
+        r'|(?:original|extended|club|deluxe)\s+(?:mix|version|edit)'
+        r'|(?:single|album)\s+version'
+        r'|bonus\s+track'
+        r'|(?:mono|stereo)'
+        r'|(?:feat|ft|featuring)\.?\s+.+'
+    )
+    pattern = rf'\s*[\(\[](?:{_PAREN})[\)\]]|\s*[-/]\s*(?:{_DASH})'
+    return re.sub(pattern, '', name, flags=re.IGNORECASE).strip()
 
 
 # =============================================================================
@@ -228,7 +251,13 @@ def parse_playlist_data(playlist_data):
         song['link'] = track['external_urls']['spotify']
         song['album'] = track['album']['name']
         songs.append(song)
-        
+
+    no_year = [s for s in songs if s['year'] is None]
+    if no_year:
+        print(f"\n⚠ {len(no_year)} song(s) have no year — edit songs.json manually before re-running:")
+        for s in no_year:
+            print(f"  - {s['artist']} — {s['original_name']}")
+
     return songs
 
 
@@ -706,7 +735,13 @@ def fetch_no_api_data_from_list(urls, progress_bar=None):
         print(f"\n⚠ {len(errors)} song(s) failed to scrape:")
         for err in errors:
             print(f"  - {err['url']}: {err['error']}")
-            
+
+    no_year = [s for s in songs if s['year'] is None]
+    if no_year:
+        print(f"\n⚠ {len(no_year)} song(s) have no year — edit songs.json manually before re-running:")
+        for s in no_year:
+            print(f"  - {s['artist']} — {s['original_name']}")
+
     return songs
 
 def create_pdf_in_memory(songs, progress_bar=None):
