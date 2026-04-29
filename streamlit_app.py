@@ -321,6 +321,7 @@ with col2:
 
 st.divider()
 
+# Instructions and Preview Columns
 info_col, preview_col = st.columns([1, 1])
 
 with info_col:
@@ -341,6 +342,7 @@ with preview_col:
             "- Track links: `https://open.spotify.com/track/...`\n"
             "- Playlist links: `https://open.spotify.com/playlist/...`")
 
+# Input Area
 st.subheader("Input")
 
 btn_col1, btn_col2 = st.columns(2)
@@ -357,6 +359,7 @@ user_input = st.text_area(
     on_change=reset_generation,
 )
 
+# Detect input type
 input_type, input_data = parse_input(user_input)
 
 if input_type == 'playlist':
@@ -367,6 +370,7 @@ else:
     st.warning("No valid Spotify links detected yet.")
 
 
+# --- STEP 1: SCRAPE / FETCH METADATA ---
 if st.button("🔍 Fetch Song Metadata", type="primary"):
     if input_type == 'empty':
         st.error("Please paste some valid Spotify links first!")
@@ -404,6 +408,7 @@ if st.button("🔍 Fetch Song Metadata", type="primary"):
         st.session_state.pdf_data = None  # reset PDF when songs change
 
 # --- REVIEW AND GENERATE ---
+# --- STEP 2: REVIEW & EDIT SONGS TABLE ---
 songs = st.session_state.songs
 if songs:
     st.divider()
@@ -411,6 +416,8 @@ if songs:
     st.caption("Fix any incorrect years before generating cards. "
                "Songs with unknown years show as empty — fill them in!")
 
+    # Build an editable dataframe
+    import pandas as pd
     df = pd.DataFrame([
         {
             "Artist": s['artist'],
@@ -438,6 +445,7 @@ if songs:
         hide_index=True,
     )
 
+    # Count problems
     unknown_count = edited_df['Year'].isna().sum()
     if unknown_count > 0:
         st.warning(f"⚠️ {unknown_count} song(s) have no year. Please fill them in above, "
@@ -447,6 +455,7 @@ if songs:
     st.divider()
     st.subheader("👀 Card Preview")
     
+    # Pick a sample song for preview
     preview_idx = st.selectbox(
         "Preview card for:", 
         range(len(edited_df)),
@@ -475,9 +484,11 @@ if songs:
         )
         st.image(sol_card, use_container_width=True)
 
+    # --- STEP 3: GENERATE PDF ---
     st.divider()
     
     if st.button("🎴 Create My PDF", type="primary"):
+        # Apply edited years back to songs
         for i, song in enumerate(songs):
             new_artist = edited_df.iloc[i]['Artist']
             new_song_name = edited_df.iloc[i]['Song']
@@ -507,6 +518,7 @@ if songs:
         st.session_state.pdf_data = pdf_data
         st.balloons()
 
+    # Show download button if PDF exists
     if st.session_state.pdf_data:
         st.download_button(
             label="💾 Download Printable PDF",
