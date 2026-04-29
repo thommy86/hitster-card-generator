@@ -62,14 +62,6 @@ def parse_input(text):
     
     return 'empty', None
 
-def color_picker_with_alpha(label, default_hex="#000000", default_alpha=255, key=None):
-    col1, col2 = st.columns([1, 1])
-    with col1:
-        c = st.color_picker(label, value=default_hex, key=f"{key}_c")
-    with col2:
-        a = st.number_input(f"Opacity (0-255)", min_value=0, max_value=255, value=default_alpha, step=5, key=f"{key}_a")
-    return f"{c}{a:02x}".upper()
-
 import uuid
 
 def add_color_cb(key_prefix):
@@ -109,13 +101,8 @@ def dynamic_color_list(key_prefix, title, default_colors, help_text=""):
             
             col1, col2, col3, col4 = st.columns([5, 1, 1, 1])
             with col1:
-                # Make a compact color picker
-                c_col1, c_col2 = st.columns([1, 1])
-                with c_col1:
-                    new_hex = st.color_picker(f"Color {i+1}", value=hex_c, key=f"{key_prefix}_c_{item_id}")
-                with c_col2:
-                    new_a = st.number_input("Opacity (0-255)", min_value=0, max_value=255, value=alpha, step=5, key=f"{key_prefix}_a_{item_id}")
-                items[i]["color"] = f"{new_hex}{new_a:02x}".upper()
+                new_hex = st.color_picker(f"Color {i+1}", value=hex_c, key=f"{key_prefix}_c_{item_id}")
+                items[i]["color"] = new_hex
             
             with col2:
                 st.markdown("<div style='height: 28px;'></div>", unsafe_allow_html=True)
@@ -191,7 +178,7 @@ with st.sidebar:
     with tabs[1]:
         st.subheader("🖼️ Background")
         qr_bg_type = st.selectbox("Background Type", ["neon_rings", "solid", "image"], key="qr_bg_type")
-        qr_bg_color = color_picker_with_alpha("Background Color", default_hex="#000000", default_alpha=255, key="qr_bg_color")
+        qr_bg_color = st.color_picker("Background Color", value="#000000", key="qr_bg_color")
         
         if qr_bg_type == "image":
             qr_bg_upload = st.file_uploader("Upload Image (QR Side)", type=["png", "jpg", "jpeg"], key="qr_bg_up")
@@ -216,9 +203,9 @@ with st.sidebar:
                 
         st.subheader("📱 QR Settings")
         qr_bg_mode = st.selectbox("QR Background Mode", ["solid", "transparent"], key="qr_bg_mode")
-        qr_module_color = color_picker_with_alpha("QR Module Color", default_hex="#000000", default_alpha=255, key="qr_mod_c")
+        qr_module_color = st.color_picker("QR Module Color", value="#000000", key="qr_mod_c")
         if qr_bg_mode == "solid":
-            st.session_state.qr_backplate_color = color_picker_with_alpha("QR Backplate Color", default_hex="#FFFFFF", default_alpha=255, key="qr_bp_c")
+            st.session_state.qr_backplate_color = st.color_picker("QR Backplate Color", value="#FFFFFF", key="qr_bp_c")
             st.session_state.qr_padding = st.slider("Backplate Padding", 0, 200, 40, key="qr_pad")
             st.session_state.qr_radius = st.slider("Backplate Corner Radius", 0, 100, 20, key="qr_rad")
         st.session_state.qr_size_ratio = st.slider("QR Size Ratio (%)", 10, 80, 45, key="qr_size") / 100.0
@@ -230,7 +217,7 @@ with st.sidebar:
             pos_options = ["top", "bottom", "top_left", "top_right", "bottom_left", "bottom_right", "center_above_qr", "center_below_qr"]
             st.session_state.qr_title_pos = st.selectbox("Position", pos_options, key="qr_t_p")
             st.session_state.qr_title_size = st.slider("Font Size", 20, 200, 80, key="qr_t_s")
-            st.session_state.qr_title_color = color_picker_with_alpha("Title Color", default_hex="#FFFFFF", default_alpha=255, key="qr_t_c")
+            st.session_state.qr_title_color = st.color_picker("Title Color", value="#FFFFFF", key="qr_t_c")
             st.session_state.qr_title_bg = st.toggle("Draw Background Box", key="qr_t_bg")
 
     with tabs[2]:
@@ -268,7 +255,7 @@ with st.sidebar:
             ]
             st.session_state.sol_title_pos = st.selectbox("Position", pos_options_sol, key="sol_t_p")
             st.session_state.sol_title_size = st.slider("Font Size", 20, 200, 80, key="sol_t_s")
-            st.session_state.sol_title_color = color_picker_with_alpha("Title Color", default_hex="#000000", default_alpha=255, key="sol_t_c")
+            st.session_state.sol_title_color = st.color_picker("Title Color", value="#000000", key="sol_t_c")
             st.session_state.sol_title_bg = st.toggle("Draw Background Box", key="sol_t_bg")
 
     # Update db with all settings
