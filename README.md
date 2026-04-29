@@ -22,20 +22,47 @@ Turn your favorite playlists into a physical card game. The tool creates profess
 
 ---
 
+---
+
 ## ✨ Features
 
 | Feature | Details |
 |---|---|
+| 🎨 **Deep Customization** | Customize background colors, neon rings, QR styles, and game titles |
+| 🖼️ **Custom Backgrounds** | Upload your own images to use as card backgrounds |
+| 📱 **Scan-Safe QR** | Choose between transparent or solid QR backgrounds for 100% scan reliability |
+| 🏷️ **Game Titles** | Add custom game titles at various positions (top, bottom, vertical, etc.) |
 | 🌐 **Web Interface** | [Streamlit app](https://hitster-card-generator.streamlit.app/) — paste links, review, download |
 | 🔗 **No API Key Required** | Scrapes public Spotify pages; works with individual tracks *or* playlist URLs |
-| 📋 **Playlist URL Support** | Paste a single playlist URL to import up to ~100 tracks (unlimited with API credentials) |
+| 📋 **Playlist URL Support** | Paste a single playlist URL to import tracks |
 | ✏️ **Manual Year Override** | Edit years in an interactive table before generating the PDF |
-| 🎨 **Neon QR Design** | Unique randomised neon rings on every card |
-| 🎯 **Smart Colours** | Dynamic gradient (Purple → Pink → Gold → Blue) mapped to release years |
 | 🖨️ **Print-Ready PDF** | A4, 5 × 5 cm cards, 20 per page, duplex-optimised |
-| 💡 **Ink Saving Mode** | White background / black text toggle |
-| ✂️ **Cutting Borders** | Optional border lines for easier cutting |
-| 🏷️ **Card Labels** | Stamp each card with a custom label (event name, playlist, etc.) |
+
+---
+
+## 🎨 Card Customization
+
+You can now fully customize the look and feel of your cards in the **sidebar**:
+
+### 📱 QR Side Design
+- **Background Type:** Choose between `Neon Rings`, `Solid Color`, or `Custom Image`.
+- **Neon Rings:** Adjust thickness, color palette, and ring count.
+- **QR Background Mode:** 
+  - `Transparent`: Classic look, neon rings show through the QR code.
+  - `Solid`: Draws a backplate (square or rounded) behind the QR code for maximum scan reliability.
+- **QR Colors:** Customize module and backplate colors.
+- **QR Size:** Scale the QR code up or down.
+
+### 🔤 Game Titles & Labels
+- **Game Title:** Add a custom text like "90s Party" or "Wedding 2026".
+- **Positioning:** Place the title at the top, bottom, or vertically on the sides.
+- **Styling:** Adjust font size, color, and background boxes for better readability.
+
+### 🖼️ Custom Background Image
+1. Select **Background Type: Image** in the sidebar.
+2. Upload a square image (recommended: 2000x2000px).
+3. The image will be automatically cropped and resized to fit the card.
+4. **Pro Tip:** Use **Solid QR Background Mode** when using busy image backgrounds to ensure the QR code remains scannable.
 
 ---
 
@@ -45,10 +72,10 @@ Turn your favorite playlists into a physical card game. The tool creates profess
 
 👉 **<https://hitster-card-generator.streamlit.app/>**
 
-1. **Copy links** — In Spotify Desktop, open your playlist, select songs (`Ctrl+A`), copy (`Ctrl+C`).
-2. **Paste** — Drop them into the text area (individual track links *or* a single playlist URL).
-3. **Review** — Check the metadata table and fix any wrong years.
-4. **Download** — Click **Create My PDF** and print double-sided.
+1. **Paste Links** — Track links or playlist URLs.
+2. **Customize Design** — Tweak colors, QR style, and titles in the sidebar.
+3. **Review** — Check the metadata table and fix any years.
+4. **Download** — Click **Create My PDF**.
 
 ### Option B — Local CLI
 
@@ -56,39 +83,26 @@ Turn your favorite playlists into a physical card game. The tool creates profess
 git clone https://github.com/WhiteShunpo/hitster-card-generator.git
 cd hitster-card-generator
 pip install -r requirements.txt
+python streamlit_app.py
 ```
 
-**Scraper mode (no API key):**
-
-1. Collect links from Spotify Desktop (`Ctrl+A` → `Ctrl+C`).
-2. Save them in a file called `links.txt` in the project root.
-3. Run:
+**CLI Scraper mode:**
 
 ```bash
-python src/hitster_card_creator.py
-# With options:
-python src/hitster_card_creator.py --ink-save-mode --card-draw-border --card-label "Game Night"
-```
-
-**API mode** (if you have Spotify credentials):
-
-```bash
-cp .env.example .env
-# Fill in CLIENT_ID, CLIENT_SECRET, PLAYLIST_URL
-python src/hitster_card_creator.py
+python src/hitster_card_creator.py --qr-bg-mode solid --game-title "Hits"
 ```
 
 ---
 
-## ⚙️ Configuration
+## ⚙️ Configuration (.env / CLI)
 
-All options can be set via the **sidebar** in the web app, via **CLI flags**, or in the `.env` file.
-
-| Setting | CLI flag | `.env` variable | Default |
-|---|---|---|---|
-| Ink saving mode | `--ink-save-mode` | `INK_SAVING_MODE=true` | `false` |
-| Cutting borders | `--card-draw-border` | `CARD_DRAW_BORDER=true` | `false` |
-| Card label | `--card-label "text"` | `CARD_LABEL=text` | *(none)* |
+| Setting | CLI flag | `.env` variable |
+|---|---|---|
+| QR Background Mode | `--qr-bg-mode` | `QR_BG_MODE=solid` |
+| QR Module Color | `--qr-module-color` | `QR_MODULE_COLOR=#FFFFFF` |
+| Background Type | `--bg-type` | `BG_TYPE=neon_rings` |
+| Game Title | `--game-title` | `GAME_TITLE=MyGame` |
+| Card Label | `--card-label` | `CARD_LABEL=Label` |
 
 ### Colour gradient
 
